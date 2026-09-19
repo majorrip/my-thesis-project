@@ -1,0 +1,40 @@
+\documentclass[12pt, a4paper, oneside]{report}
+
+% Essential Packages
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper, left=1.5in, right=1.0in, top=1.0in, bottom=1.0in]{geometry} % Standard margins
+\usepackage{graphicx}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage[backend=biber, style=ieee]{biblatex}
+
+\addbibresource{references.bib}
+
+\begin{document}
+
+% Preliminary Matter
+\input{core/titlepage.tex}
+\input{core/declaration.tex}
+\input{core/approval.tex}
+\input{core/abstract.tex}
+\input{core/ack.tex}
+
+% Tables of Contents
+\tableofcontents
+\listoffigures
+\listoftables
+\cleardoublepage
+
+% Chapters
+\pagenumbering{arabic}
+\input{chapters/ch1_intro.tex}
+\input{chapters/ch2_lit.tex}
+\input{chapters/ch3_method.tex}
+\input{chapters/ch4_results.tex}
+\input{chapters/ch5_conclusion.tex}
+
+% References
+\printbibliography[title={References}]
+
+\end{document}
