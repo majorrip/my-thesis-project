@@ -1,0 +1,19 @@
+\chapter{Introduction}
+
+\section{Background}
+The proliferation of deep learning models has accelerated interest in executing intelligent workloads directly on network boundaries and personal devices. Traditional cloud-centric AI architectures require constant transmission of sensitive telemetry, creating bandwidth bottlenecks, latency overheads, and substantial privacy risks.
+
+\section{Problem Statement}
+Executing complex predictive architectures on localized edge devices introduces two distinct vulnerabilities:
+\begin{enumerate}
+    \item \textbf{Resource Constraints:} Limited memory bandwidth and VRAM make standard backpropagation across large transformer backbones infeasible.
+    \item \textbf{Latent Collapse:} Non-generative architectures (such as JEPAs) easily optimize local loss functions by mapping disparate inputs to constant embedding vectors, collapsing representation capacity.
+\end{enumerate}
+
+\section{Research Objectives}
+\begin{itemize}
+    \item Design a localized, joint-embedding predictive architecture tailored for edge computing nodes.
+    \item Implement local layer-wise gradient isolation (`firebreak` bounds) to enable multi-layer training under strict memory budgets.
+    \item Integrate variance and covariance regularization constraints to prevent dimensional collapse during on-device learning.
+    \item Evaluate the latency, memory footprint, and representation loss against cloud-reliant baselines.
+\end{itemize}

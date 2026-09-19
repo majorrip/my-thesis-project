@@ -1,0 +1,13 @@
+\chapter{Methodology}
+
+\section{Architecture Design}
+The proposed system architecture relies on a Joint-Embedding Predictive Architecture (JEPA) composed of three primary modules: a Context Encoder $f_\theta$, a Target Encoder $f_{\bar{\theta}}$ updated via Exponential Moving Average (EMA), and a Latent Predictor $p_\psi$.
+
+\section{Loss Function and Regularization}
+To guarantee representation stability without negative sample pairing, the local layer-wise distillation loss $\mathcal{L}_{\text{total}}$ is defined as:
+
+\begin{equation}
+\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{distill}} + \alpha \cdot \mathcal{L}_{\text{var}} + \beta \cdot \mathcal{L}_{\text{cov}}
+\end{equation}
+
+where $\mathcal{L}_{\text{distill}}$ measures the mean squared error in latent space, $\mathcal{L}_{\text{var}}$ enforces standard deviation thresholds across batch instances, and $\mathcal{L}_{\text{cov}}$ penalizes off-diagonal covariance entries to enforce feature independence.
