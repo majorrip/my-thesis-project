@@ -1,19 +1,78 @@
 \chapter{Introduction}
+\label{chap:intro}
 
 \section{Background}
-The proliferation of deep learning models has accelerated interest in executing intelligent workloads directly on network boundaries and personal devices. Traditional cloud-centric AI architectures require constant transmission of sensitive telemetry, creating bandwidth bottlenecks, latency overheads, and substantial privacy risks.
+The proliferation of deep learning models has accelerated interest in
+executing intelligent workloads directly on network boundaries and
+personal devices. Traditional cloud-centric AI architectures require the
+constant transmission of sensitive telemetry to remote servers, creating
+bandwidth bottlenecks, latency overheads, and substantial privacy risks
+\cite{shi2016edge}. Edge and Dew computing paradigms respond to these
+pressures by relocating inference---and, increasingly, learning---toward
+the device tier, where computation occurs close to, or directly at, the
+data source \cite{wang2016dew}.
+
+A parallel shift has occurred in the design of representation-learning
+objectives. Generative and reconstructive models expend significant
+capacity predicting high-dimensional outputs (pixels or tokens), much of
+which is irrelevant to downstream tasks. Joint-Embedding Predictive
+Architectures (JEPAs) instead predict in an abstract latent space,
+discarding unpredictable low-level detail and concentrating capacity on
+semantically meaningful structure \cite{lecun2022path, assran2023self}.
+This property makes JEPAs an attractive candidate for the edge, where
+compute and memory budgets preclude large generative backbones.
 
 \section{Problem Statement}
-Executing complex predictive architectures on localized edge devices introduces two distinct vulnerabilities:
+Executing predictive architectures on localized edge devices introduces
+two distinct and coupled challenges:
 \begin{enumerate}
-    \item \textbf{Resource Constraints:} Limited memory bandwidth and VRAM make standard backpropagation across large transformer backbones infeasible.
-    \item \textbf{Latent Collapse:} Non-generative architectures (such as JEPAs) easily optimize local loss functions by mapping disparate inputs to constant embedding vectors, collapsing representation capacity.
+    \item \textbf{Resource Constraints:} Limited memory bandwidth and VRAM
+    make end-to-end backpropagation across large backbones infeasible on
+    micro-architectures, motivating localized, layer-wise training schemes
+    that bound the active computational graph.
+    \item \textbf{Latent Collapse:} Non-generative architectures such as
+    JEPAs can trivially minimize a latent prediction loss by mapping
+    disparate inputs to a constant embedding vector, collapsing
+    representational capacity. Avoiding this failure mode without
+    negative-sample pairing requires explicit regularization
+    \cite{bardes2022vicreg}.
 \end{enumerate}
 
 \section{Research Objectives}
 \begin{itemize}
-    \item Design a localized, joint-embedding predictive architecture tailored for edge computing nodes.
-    \item Implement local layer-wise gradient isolation (`firebreak` bounds) to enable multi-layer training under strict memory budgets.
-    \item Integrate variance and covariance regularization constraints to prevent dimensional collapse during on-device learning.
-    \item Evaluate the latency, memory footprint, and representation loss against cloud-reliant baselines.
+    \item Design a localized, joint-embedding predictive architecture
+    (EdgeVerify) tailored to edge and Dew computing nodes.
+    \item Implement local, layer-wise gradient isolation to enable training
+    under strict memory budgets by bounding the backpropagation graph.
+    \item Integrate variance and covariance regularization into the
+    distillation objective to prevent dimensional collapse during
+    on-device learning.
+    \item Define a reproducible protocol to evaluate convergence stability,
+    representation collapse, inference latency, and memory footprint
+    against cloud-reliant and non-regularized baselines.
 \end{itemize}
+
+\section{Contributions}
+The contributions of this thesis are:
+\begin{itemize}
+    \item An architecture, \textbf{EdgeVerify}, combining an EMA target
+    encoder, an action-conditioned latent predictor, and a
+    VICReg-inspired anti-collapse objective for edge deployment
+    (Chapter~\ref{chap:method}).
+    \item A stable local loss formulation,
+    $\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{distill}}
+    + \alpha\,\mathcal{L}_{\text{var}} + \beta\,\mathcal{L}_{\text{cov}}$,
+    that regularizes representations without negative pairs.
+    \item A proof-of-concept implementation in PyTorch and an evaluation
+    methodology for assessing the framework on resource-constrained
+    hardware (Chapter~\ref{chap:results}).
+\end{itemize}
+
+\section{Thesis Organization}
+Chapter~\ref{chap:lit} surveys related work in self-supervised
+representation learning, joint-embedding architectures, and edge/Dew
+computing. Chapter~\ref{chap:method} details the EdgeVerify architecture,
+loss formulation, and training procedure. Chapter~\ref{chap:results}
+presents the experimental protocol and reports results.
+Chapter~\ref{chap:conclusion} summarizes the findings, discusses
+limitations, and outlines future work.

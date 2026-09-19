@@ -1,0 +1,96 @@
+\chapter{Literature Review}
+\label{chap:lit}
+
+This chapter situates EdgeVerify within three bodies of work: (i)
+self-supervised representation learning and the problem of representational
+collapse, (ii) joint-embedding predictive architectures, and (iii) edge,
+Dew, and decentralized computing. For each, we identify the mechanisms
+relevant to the proposed design and the gaps that motivate it.
+
+\section{Self-Supervised Representation Learning}
+Self-supervised learning (SSL) removes the dependence on labeled data by
+constructing a pretext task from the input itself. Contrastive methods
+such as SimCLR \cite{chen2020simple} learn invariances by pulling together
+embeddings of augmented views of the same image while pushing apart
+embeddings of different images. Their principal limitation is a reliance
+on large batches of negative samples to avoid trivial solutions---a
+requirement that is poorly suited to memory-constrained edge hardware.
+
+A subsequent line of work removed negatives entirely. BYOL
+\cite{grill2020bootstrap} trains an online network to predict the output of
+a momentum-updated target network, demonstrating that a predictor combined
+with a stop-gradient and an Exponential Moving Average (EMA) target can
+prevent collapse without contrastive pairs. SimSiam \cite{chen2021exploring}
+further showed that the stop-gradient operation, rather than the momentum
+encoder itself, is the critical component preventing collapse. EdgeVerify
+adopts this EMA-target-plus-predictor design (Chapter~\ref{chap:method}),
+but pairs it with explicit statistical regularization rather than relying
+on architectural asymmetry alone.
+
+\section{Regularization Against Dimensional Collapse}
+An alternative to asymmetric, negative-free designs is to regularize the
+statistics of the embedding space directly. Barlow Twins
+\cite{zbontar2021barlow} minimizes redundancy by driving the
+cross-correlation matrix between two views toward the identity. VICReg
+\cite{bardes2022vicreg} decomposes the objective into three explicit
+terms: an \emph{invariance} term (mean-squared error between views), a
+\emph{variance} term that maintains the standard deviation of each
+embedding dimension above a hinge threshold, and a \emph{covariance} term
+that decorrelates dimensions. This explicit, non-contrastive formulation
+is directly applicable at the level of individual layers and small
+batches, which is why EdgeVerify's loss adapts the variance and covariance
+terms of VICReg. The distinction in this work is that the regularizers are
+applied within a \emph{local, layer-wise distillation} objective rather
+than a single global loss.
+
+\section{Joint-Embedding Predictive Architectures}
+LeCun's position paper on autonomous machine intelligence
+\cite{lecun2022path} argues for prediction in representation space as a
+route to efficient world models, framing the JEPA as a core building
+block. I-JEPA \cite{assran2023self} instantiated this for images:
+given a context block, a predictor estimates the representations of
+masked target blocks produced by a target encoder, with no pixel-level
+reconstruction. This yields strong representations while avoiding the
+computational cost of generative decoding, and---unlike reconstructive
+masked autoencoders \cite{he2022masked}---never materializes the
+high-dimensional output. EdgeVerify inherits this predict-in-latent-space
+principle and extends it with an \emph{action-conditioned} predictor:
+the prediction is conditioned on a spatial action (a bounding box),
+aligning the architecture with the conditional structure of world models
+in \cite{lecun2022path}.
+
+\section{Knowledge Distillation}
+The teacher--student framing of EdgeVerify is related to knowledge
+distillation \cite{hinton2015distilling}, in which a student network is
+trained to match the outputs of a teacher. In the SSL setting, DINO
+\cite{caron2021emerging} recast self-distillation with no labels as an
+effective pretraining strategy for vision transformers, using a
+momentum teacher and centering/sharpening to avoid collapse. EdgeVerify's
+EMA target encoder plays the role of a slowly-evolving teacher, but the
+anti-collapse mechanism is the VICReg-style variance/covariance penalty
+rather than centering and sharpening.
+
+\section{Edge, Dew, and Decentralized Computing}
+Edge computing relocates computation from centralized clouds toward the
+data source to reduce latency and bandwidth and to improve privacy
+\cite{shi2016edge}. Dew computing pushes this further, positioning
+independent, on-device capability that can function with minimal or
+intermittent connectivity to higher tiers \cite{wang2016dew}. Decentralized
+learning approaches such as federated learning \cite{mcmahan2017communication}
+keep raw data local and communicate only model updates, mitigating privacy
+risk at the cost of communication rounds. EdgeVerify targets a stricter
+regime than federated learning: it aims to keep both data \emph{and}
+training local to a single resource-constrained node, which sharpens the
+memory-budget problem and motivates the layer-wise gradient isolation
+described in the next chapter.
+
+\section{Summary and Research Gap}
+The reviewed literature establishes (i) that negative-free SSL is feasible
+via EMA targets and predictors, (ii) that explicit variance/covariance
+regularization prevents collapse without negatives, and (iii) that JEPAs
+avoid the cost of generative decoding. What remains underexplored is the
+combination of these ideas under the memory constraints of a single edge
+or Dew node, where the training graph itself must be bounded. EdgeVerify
+addresses this gap by uniting an action-conditioned JEPA, a VICReg-style
+anti-collapse objective, and local layer-wise gradient isolation into a
+single architecture intended for on-device execution.

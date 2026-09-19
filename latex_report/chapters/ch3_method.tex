@@ -1,13 +1,165 @@
 \chapter{Methodology}
+\label{chap:method}
+
+This chapter describes the EdgeVerify architecture, its training objective,
+and the localized training procedure. The formulation follows the
+proof-of-concept implementation exactly; parameter names and coefficients
+are preserved as defined in the reference code.
 
 \section{Architecture Design}
-The proposed system architecture relies on a Joint-Embedding Predictive Architecture (JEPA) composed of three primary modules: a Context Encoder $f_\theta$, a Target Encoder $f_{\bar{\theta}}$ updated via Exponential Moving Average (EMA), and a Latent Predictor $p_\psi$.
+EdgeVerify is a Joint-Embedding Predictive Architecture composed of four
+modules: a Context Encoder $f_\theta$, an EMA-updated Target Encoder
+$f_{\bar{\theta}}$, an Action Encoder $g_\phi$, and a Latent Predictor
+$p_\psi$. All embeddings share a common latent dimension $d = 256$.
+
+\subsection{Context and Target Encoders}
+The Context Encoder $f_\theta$ maps an input image
+$x \in \mathbb{R}^{3 \times H \times W}$ to a latent vector
+$s_t \in \mathbb{R}^{d}$ through three strided convolutional blocks
+(channel widths $32 \rightarrow 64 \rightarrow 256$, kernel size $3$,
+stride $2$), each followed by batch normalization and a ReLU nonlinearity,
+and terminated by adaptive average pooling and flattening:
+\begin{equation}
+    s_t = f_\theta(x_{\text{partial}}), \qquad s_t \in \mathbb{R}^{d}.
+\end{equation}
+The Target Encoder $f_{\bar\theta}$ is architecturally identical and is
+initialized as a copy of $f_\theta$. Its parameters are excluded from
+gradient computation and are instead updated by an Exponential Moving
+Average (EMA) of the context parameters:
+\begin{equation}
+    \bar{\theta} \leftarrow \tau\,\bar{\theta} + (1 - \tau)\,\theta,
+    \qquad \tau = 0.999,
+    \label{eq:ema}
+\end{equation}
+where $\tau$ is the EMA decay. The target representation is computed under
+a stop-gradient:
+\begin{equation}
+    s_{\text{target}} = \operatorname{sg}\!\left[f_{\bar\theta}(x_{\text{full}})\right],
+\end{equation}
+with $\operatorname{sg}[\cdot]$ denoting the detached (no-gradient)
+operator. This asymmetry between a trainable online branch and a
+non-trainable EMA target is the mechanism, established by BYOL
+\cite{grill2020bootstrap} and SimSiam \cite{chen2021exploring}, that
+prevents the two branches from collapsing to a shared constant.
+
+\subsection{Action-Conditioned Prediction}
+Prediction is conditioned on a spatial action
+$a \in \mathbb{R}^{4}$ (a normalized bounding box) encoded by $g_\phi$,
+a two-layer multilayer perceptron ($4 \rightarrow 64 \rightarrow d$):
+\begin{equation}
+    a_t = g_\phi(a), \qquad a_t \in \mathbb{R}^{d}.
+\end{equation}
+The Latent Predictor $p_\psi$ ($2d \rightarrow 512 \rightarrow d$) takes the
+concatenation of the context and action embeddings and predicts the target
+representation:
+\begin{equation}
+    s_{\text{pred}} = p_\psi\!\left(\left[\,s_t \,\Vert\, a_t\,\right]\right),
+    \qquad s_{\text{pred}} \in \mathbb{R}^{d}.
+\end{equation}
+Conditioning the predictor on an action aligns EdgeVerify with the
+world-model formulation of \cite{lecun2022path}, in which future or masked
+representations are predicted as a function of a transformation applied to
+the context.
 
 \section{Loss Function and Regularization}
-To guarantee representation stability without negative sample pairing, the local layer-wise distillation loss $\mathcal{L}_{\text{total}}$ is defined as:
-
+To ensure representational stability without negative-sample pairing, the
+total objective combines a distillation term with the variance and
+covariance regularizers of VICReg \cite{bardes2022vicreg}:
 \begin{equation}
-\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{distill}} + \alpha \cdot \mathcal{L}_{\text{var}} + \beta \cdot \mathcal{L}_{\text{cov}}
+    \mathcal{L}_{\text{total}}
+    = \mathcal{L}_{\text{distill}}
+    + \alpha\,\mathcal{L}_{\text{var}}
+    + \beta\,\mathcal{L}_{\text{cov}},
+    \qquad \alpha = 1.0,\; \beta = 0.01.
+    \label{eq:total}
 \end{equation}
 
-where $\mathcal{L}_{\text{distill}}$ measures the mean squared error in latent space, $\mathcal{L}_{\text{var}}$ enforces standard deviation thresholds across batch instances, and $\mathcal{L}_{\text{cov}}$ penalizes off-diagonal covariance entries to enforce feature independence.
+\paragraph{Distillation term.}
+$\mathcal{L}_{\text{distill}}$ is the mean-squared error between the
+predicted representation and the detached target:
+\begin{equation}
+    \mathcal{L}_{\text{distill}}
+    = \big\lVert s_{\text{pred}} - s_{\text{target}} \big\rVert_2^2 \big/ d .
+\end{equation}
+
+\paragraph{Variance term.}
+The variance term enforces a per-dimension standard deviation above a
+hinge threshold $\gamma = 1.0$ on the context embedding $s_t$, preventing
+the informative branch from collapsing. Writing
+$\sigma_j = \sqrt{\operatorname{Var}(s_{t,j}) + \epsilon}$ with
+$\epsilon = 10^{-4}$ over a batch of $B$ instances,
+\begin{equation}
+    \mathcal{L}_{\text{var}}
+    = \frac{1}{d}\sum_{j=1}^{d} \max\!\left(0,\; \gamma - \sigma_j\right).
+\end{equation}
+
+\paragraph{Covariance term.}
+The covariance term decorrelates the dimensions of the predicted
+representation. Let $\tilde{s} = s_{\text{pred}} - \bar{s}_{\text{pred}}$
+be the batch-centered prediction and
+$C = \tilde{s}^{\top}\tilde{s} / (B - 1)$ its covariance matrix; the term
+penalizes the off-diagonal energy:
+\begin{equation}
+    \mathcal{L}_{\text{cov}}
+    = \frac{1}{d}\sum_{i \neq j} C_{ij}^{2}.
+\end{equation}
+Applying the variance penalty to the context embedding $s_t$ and the
+covariance penalty to the prediction $s_{\text{pred}}$ regularizes both the
+encoder output and the predictor output, discouraging both constant and
+correlated (rank-deficient) solutions.
+
+\section{Localized, Layer-Wise Gradient Isolation}
+To respect the memory budget of an edge node, EdgeVerify bounds the
+backpropagation graph rather than differentiating end-to-end through a
+large backbone. The stop-gradient on the target branch
+(Eq.~\ref{eq:ema}) and the detachment of the teacher target act as a
+\emph{firebreak}: gradients from $\mathcal{L}_{\text{distill}}$ do not
+propagate into $f_{\bar\theta}$, so only the online parameters
+$\{\theta, \phi, \psi\}$ retain an active computational graph at any step.
+This isolation is what makes multi-module training feasible under strict
+VRAM limits, and it is the property whose memory footprint
+Chapter~\ref{chap:results} is designed to quantify.
+
+\section{Training Procedure}
+The model is optimized with AdamW (learning rate $10^{-3}$, weight decay
+$10^{-4}$). At each step, the online branch produces
+$(s_{\text{pred}}, s_t)$, the target branch produces $s_{\text{target}}$
+under stop-gradient, the total loss (Eq.~\ref{eq:total}) is backpropagated
+through the online parameters, and the target encoder is updated by the
+EMA rule (Eq.~\ref{eq:ema}). Table~\ref{tab:hparams} summarizes the
+configuration used by the proof-of-concept implementation.
+
+\begin{table}[htbp]
+    \centering
+    \caption{EdgeVerify configuration in the proof-of-concept implementation.}
+    \label{tab:hparams}
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{Component / Hyperparameter} & \textbf{Value} \\
+        \midrule
+        Latent dimension $d$ & $256$ \\
+        Encoder blocks (channels) & $32 \rightarrow 64 \rightarrow 256$ \\
+        Action encoder & $4 \rightarrow 64 \rightarrow 256$ \\
+        Predictor & $512 \rightarrow 512 \rightarrow 256$ \\
+        EMA decay $\tau$ & $0.999$ \\
+        Variance threshold $\gamma$ & $1.0$ \\
+        Variance weight $\alpha$ & $1.0$ \\
+        Covariance weight $\beta$ & $0.01$ \\
+        Optimizer & AdamW \\
+        Learning rate & $10^{-3}$ \\
+        Weight decay & $10^{-4}$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Note on the current data pipeline.}
+In the present proof-of-concept, the training loop operates on
+synthetically generated tensors: full images are sampled from a uniform
+distribution, the partial (context) view is produced by zeroing a central
+$32 \times 32$ region, and a single fixed bounding box is used as the
+spatial action. This configuration verifies that the architecture trains
+and that the loss is numerically stable, but it does not constitute an
+evaluation on real data. Replacing this pipeline with a standard image
+dataset is a prerequisite for the empirical results discussed in
+Chapter~\ref{chap:results}, and is reflected in the experimental design
+below.

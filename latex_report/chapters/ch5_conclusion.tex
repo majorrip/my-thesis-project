@@ -1,0 +1,62 @@
+\chapter{Conclusion and Future Work}
+\label{chap:conclusion}
+
+\section{Summary}
+This thesis presented \textbf{EdgeVerify}, a Joint-Embedding Predictive
+Architecture designed for localized execution on edge and Dew computing
+nodes. The architecture combines an EMA-updated target encoder, an
+action-conditioned latent predictor, and a VICReg-inspired
+variance/covariance objective applied within a local, layer-wise
+distillation loss. By predicting in an abstract latent space rather than
+reconstructing raw inputs, and by bounding the backpropagation graph
+through stop-gradient firebreaks, the design targets the two coupled
+obstacles to on-device learning identified in Chapter~\ref{chap:intro}:
+strict memory budgets and representational collapse.
+
+\section{Contributions}
+The work contributes: (i) the EdgeVerify architecture and its
+action-conditioned prediction formulation; (ii) a negative-free, stable
+local loss that regularizes both the encoder output (variance) and the
+predictor output (covariance); and (iii) a proof-of-concept PyTorch
+implementation together with a reproducible protocol for evaluating
+convergence, collapse, latency, and memory footprint.
+
+\section{Limitations}
+The principal limitation of the present work is that empirical validation
+is preliminary. The evaluation in Chapter~\ref{chap:results} was conducted
+on non-standard data (procedurally generated structured images and the
+low-resolution scikit-learn digits set), using a single random seed and
+CPU-only measurement, because the environment lacked network access to
+standard benchmarks. Within those limits, the evaluation surfaced a
+substantive finding: while the variance term prevents variance collapse,
+the covariance term at its current weight ($\beta = 0.01$) fails to prevent
+dimensional (rank) collapse, and the unregularized baseline was in fact
+higher-rank. The design's collapse-prevention claim is therefore only
+partially supported and requires the regularizer-weight ablation described
+below. In addition, the
+convolutional encoder used in the proof-of-concept is small relative to the
+transformer backbones typical of the JEPA literature, so conclusions drawn
+here may not transfer directly to larger models. The ``multi-agent'' aspect
+suggested by the title is, at present, realized only as the multi-module
+(context/target/predictor) structure of a single node; coordination across
+multiple physical agents is not yet implemented.
+
+\section{Future Work}
+Several directions follow directly:
+\begin{itemize}
+    \item \textbf{Empirical evaluation.} Implement the dataset loader
+    (\texttt{dataset.py}) and benchmark suite (\texttt{evaluate.py}) and
+    run the protocol of Chapter~\ref{chap:results} on a standard vision
+    benchmark and a defined edge device, populating the results tables.
+    \item \textbf{Regularizer-weight ablation.} Systematically increase the
+    covariance weight $\beta$ (and vary $\alpha$ and the threshold $\gamma$)
+    to test whether stronger decorrelation restores effective rank, and
+    evaluate applying the variance and covariance penalties to the same
+    embedding rather than to $s_t$ and $s_{\text{pred}}$ separately.
+    \item \textbf{Backbone scaling.} Evaluate whether the local objective
+    remains stable with larger or transformer-based encoders.
+    \item \textbf{True multi-agent extension.} Extend the single-node
+    design to coordinated learning across multiple edge nodes, connecting
+    the framework to decentralized-learning approaches such as federated
+    learning \cite{mcmahan2017communication}.
+\end{itemize}

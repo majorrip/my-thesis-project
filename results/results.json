@@ -1,0 +1,94 @@
+{
+  "structured": {
+    "full": {
+      "alpha": 1.0,
+      "beta": 0.01,
+      "final_loss": {
+        "distill": 0.12045771380265553,
+        "var": 0.0,
+        "cov": 6.979497075080872,
+        "total": 0.19025268157323202
+      },
+      "collapse": {
+        "sigma_bar": 1.5486584901809692,
+        "effective_rank": 1.6377640873897656,
+        "latent_dim": 256
+      },
+      "efficiency": {
+        "params": 745536,
+        "param_memory_mb": 2.844,
+        "latency_ms_mean": 2.043,
+        "latency_ms_std": 0.111
+      },
+      "peak_rss_mb": 851.7
+    },
+    "unregularized": {
+      "alpha": 0.0,
+      "beta": 0.0,
+      "final_loss": {
+        "distill": 0.0021190021167664477,
+        "var": 0.7543155699968338,
+        "cov": 0.0870698702832063,
+        "total": 0.0021190021167664477
+      },
+      "collapse": {
+        "sigma_bar": 0.24526280164718628,
+        "effective_rank": 6.460093862799483,
+        "latent_dim": 256
+      },
+      "efficiency": {
+        "params": 745536,
+        "param_memory_mb": 2.844,
+        "latency_ms_mean": 2.109,
+        "latency_ms_std": 0.321
+      },
+      "peak_rss_mb": 870.4
+    }
+  },
+  "digits": {
+    "full": {
+      "alpha": 1.0,
+      "beta": 0.01,
+      "final_loss": {
+        "distill": 0.20721484082085745,
+        "var": 0.001455211080610752,
+        "cov": 4.859306067228317,
+        "total": 0.25726311228105
+      },
+      "collapse": {
+        "sigma_bar": 1.7718956470489502,
+        "effective_rank": 1.034340130328982,
+        "latent_dim": 256
+      },
+      "efficiency": {
+        "params": 745536,
+        "param_memory_mb": 2.844,
+        "latency_ms_mean": 2.479,
+        "latency_ms_std": 0.533
+      },
+      "peak_rss_mb": 1099.3
+    },
+    "unregularized": {
+      "alpha": 0.0,
+      "beta": 0.0,
+      "final_loss": {
+        "distill": 0.0006222784390307165,
+        "var": 0.920353929911341,
+        "cov": 0.0006218376635972943,
+        "total": 0.0006222784390307165
+      },
+      "collapse": {
+        "sigma_bar": 0.07989941537380219,
+        "effective_rank": 3.5709803664217237,
+        "latent_dim": 256
+      },
+      "efficiency": {
+        "params": 745536,
+        "param_memory_mb": 2.844,
+        "latency_ms_mean": 2.361,
+        "latency_ms_std": 0.08
+      },
+      "peak_rss_mb": 1107.5
+    }
+  }
+}

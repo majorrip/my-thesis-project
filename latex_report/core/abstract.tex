@@ -1,6 +1,35 @@
 \chapter*{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
 
-As artificial intelligence moves toward decentralized deployment across local edge nodes, mitigating hallucination and latent representation collapse without relying on cloud-based computation remains a critical challenge. Centralized architectures impose extreme communication latencies and data privacy risks, whereas conventional lightweight models suffer from severe representation degradation when executed on resource-constrained micro-architectures. 
+As artificial intelligence moves toward decentralized deployment across
+local edge and Dew computing nodes, preserving representational quality
+without relying on cloud-based computation remains a critical challenge.
+Centralized architectures impose communication latency and data-privacy
+risks, whereas conventional lightweight models are prone to
+representation degradation---and, in the non-generative case, to latent
+collapse---when trained on resource-constrained micro-architectures.
 
-This thesis introduces \textbf{EdgeVerify}, a multi-agent, Joint-Embedding Predictive Architecture (JEPA) designed for localized execution across Dew and Edge computing tiers. Rather than generating high-dimensional token sequences or raw pixel reconstructions, EdgeVerify projects context representations directly into an abstract joint-embedding space. To prevent dimensional collapse during localized gradient updates, we incorporate VicReg-inspired variance and covariance regularization directly into layer-wise distillation loss calculations. Experimental evaluation demonstrates that the proposed localized architecture preserves representation entropy, achieves stable convergence (local loss $\sim 0.87$), and eliminates raw data transmission to third-party clouds, establishing a verifiable framework for data sovereignty and real-time edge verification.
+This thesis introduces \textbf{EdgeVerify}, a Joint-Embedding Predictive
+Architecture (JEPA) designed for localized execution across the Dew and
+Edge computing tiers. Rather than reconstructing high-dimensional token
+sequences or raw pixels, EdgeVerify predicts context representations
+directly within an abstract joint-embedding space, using an
+Exponential-Moving-Average (EMA) target encoder and an action-conditioned
+latent predictor. To prevent dimensional collapse during localized,
+layer-wise gradient updates, we integrate VICReg-inspired variance and
+covariance regularization directly into the distillation objective,
+removing the need for negative-sample pairing.
+
+We present a proof-of-concept implementation of the architecture and loss
+formulation, together with a reproducible experimental protocol for
+measuring convergence stability, representation collapse (embedding
+standard deviation and effective rank), and inference cost. A
+proof-of-concept evaluation against a non-regularized baseline shows that
+the variance constraint reliably prevents variance collapse (sustaining a
+mean embedding standard deviation above the hinge threshold), while
+revealing that at the current covariance weight the objective does not
+prevent dimensional (rank) collapse---an outcome that motivates a targeted
+regularizer-weight ablation. The architecture itself is compact
+($\sim\!0.75$M parameters, $2.84$~MB) with millisecond CPU inference. A
+full empirical validation on standard vision benchmarks is identified as
+the primary item of future work.
