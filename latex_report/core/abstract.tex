@@ -24,12 +24,14 @@ We present a proof-of-concept implementation of the architecture and loss
 formulation, together with a reproducible experimental protocol for
 measuring convergence stability, representation collapse (embedding
 standard deviation and effective rank), and inference cost. A
-proof-of-concept evaluation against a non-regularized baseline shows that
-the variance constraint reliably prevents variance collapse (sustaining a
-mean embedding standard deviation above the hinge threshold), while
-revealing that at the current covariance weight the objective does not
-prevent dimensional (rank) collapse---an outcome that motivates a targeted
-regularizer-weight ablation. The architecture itself is compact
-($\sim\!0.75$M parameters, $2.84$~MB) with millisecond CPU inference. A
-full empirical validation on standard vision benchmarks is identified as
-the primary item of future work.
+proof-of-concept evaluation against a non-regularized baseline---conducted
+on structured, digits, and CIFAR-10 data, and reproduced across two
+independent environments---shows that the variance constraint reliably
+prevents variance collapse (sustaining a mean embedding standard deviation
+above the hinge threshold), while revealing that at the current covariance
+weight the objective does not prevent dimensional (rank) collapse; this
+pattern holds on the CIFAR-10 natural-image subset as well as the smaller
+datasets, and motivates a targeted regularizer-weight ablation. The
+architecture itself is compact ($\sim\!0.75$M parameters, $2.84$~MB) with
+millisecond CPU inference. A full-scale benchmark evaluation is identified
+as the primary item of future work.

@@ -108,10 +108,33 @@ class DigitsJEPADataset(Dataset):
         return self.samples[idx]
 
 
+class CIFARJEPADataset(Dataset):
+    """CIFAR-10 subset (requires network access to download via torchvision)."""
+    def __init__(self, n_samples=2000, size=64, seed=0, root="./cifar"):
+        import torchvision
+        rng = np.random.default_rng(seed)
+        tv = torchvision.datasets.CIFAR10(root=root, train=True, download=True)
+        data = torch.from_numpy(tv.data[:n_samples]).float().permute(0, 3, 1, 2) / 255.0
+        data = F.interpolate(data, size=(size, size), mode="bilinear", align_corners=False)
+        self.samples = []
+        for i in range(data.size(0)):
+            full = data[i].contiguous()
+            partial, action = _apply_mask(full, rng)
+            self.samples.append((partial, full, action))
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        return self.samples[idx]
+
+
 def get_dataset(name, **kwargs):
     name = name.lower()
     if name in ("structured", "shapes"):
         return StructuredJEPADataset(**kwargs)
     if name in ("digits", "sklearn"):
         return DigitsJEPADataset(**kwargs)
+    if name in ("cifar", "cifar10", "cifar-10"):
+        return CIFARJEPADataset(**kwargs)
     raise ValueError(f"Unknown dataset: {name!r}")

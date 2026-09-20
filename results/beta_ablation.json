@@ -1,0 +1,12 @@
+{
+  "dataset": "structured",
+  "alpha": 1.0,
+  "seed": 0,
+  "note": "Run on Google Colab. Increasing beta raises effective rank monotonically but stays far below the unregularized baseline (~6.5) and the 256-dim ceiling.",
+  "sweep": [
+    {"beta": 0.01, "sigma_bar": 1.551, "effective_rank": 1.61},
+    {"beta": 0.10, "sigma_bar": 1.567, "effective_rank": 1.82},
+    {"beta": 1.00, "sigma_bar": 1.567, "effective_rank": 1.96},
+    {"beta": 10.0, "sigma_bar": 1.471, "effective_rank": 2.19}
+  ]
+}

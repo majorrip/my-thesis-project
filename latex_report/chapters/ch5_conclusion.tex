@@ -23,17 +23,20 @@ convergence, collapse, latency, and memory footprint.
 
 \section{Limitations}
 The principal limitation of the present work is that empirical validation
-is preliminary. The evaluation in Chapter~\ref{chap:results} was conducted
-on non-standard data (procedurally generated structured images and the
-low-resolution scikit-learn digits set), using a single random seed and
-CPU-only measurement, because the environment lacked network access to
-standard benchmarks. Within those limits, the evaluation surfaced a
-substantive finding: while the variance term prevents variance collapse,
-the covariance term at its current weight ($\beta = 0.01$) fails to prevent
-dimensional (rank) collapse, and the unregularized baseline was in fact
-higher-rank. The design's collapse-prevention claim is therefore only
-partially supported and requires the regularizer-weight ablation described
-below. In addition, the
+is preliminary. The evaluation in Chapter~\ref{chap:results} covered
+structured, digits, and a $2000$-image CIFAR-10 subset, with CPU-only
+measurement; the structured and digits results were shown to be stable across
+five seeds, but a full-scale benchmark run on target hardware remains
+outstanding. Within those limits, the evaluation surfaced a substantive
+finding, reproduced across two independent environments: while the variance
+term prevents variance collapse, the covariance term at its current weight
+($\beta = 0.01$) fails to prevent dimensional (rank) collapse, and the
+unregularized baseline was in fact higher-rank---a pattern that held on the
+CIFAR-10 natural images as well as the smaller datasets. A covariance-weight
+ablation (Section~\ref{sec:beta}) established that this is not resolved by
+increasing $\beta$ alone---effective rank rises only marginally---indicating
+that the collapse-prevention claim is only partially supported and that a
+structural change to the objective, rather than re-weighting, is required. In addition, the
 convolutional encoder used in the proof-of-concept is small relative to the
 transformer backbones typical of the JEPA literature, so conclusions drawn
 here may not transfer directly to larger models. The ``multi-agent'' aspect
@@ -44,15 +47,17 @@ multiple physical agents is not yet implemented.
 \section{Future Work}
 Several directions follow directly:
 \begin{itemize}
-    \item \textbf{Empirical evaluation.} Implement the dataset loader
-    (\texttt{dataset.py}) and benchmark suite (\texttt{evaluate.py}) and
-    run the protocol of Chapter~\ref{chap:results} on a standard vision
-    benchmark and a defined edge device, populating the results tables.
-    \item \textbf{Regularizer-weight ablation.} Systematically increase the
-    covariance weight $\beta$ (and vary $\alpha$ and the threshold $\gamma$)
-    to test whether stronger decorrelation restores effective rank, and
-    evaluate applying the variance and covariance penalties to the same
-    embedding rather than to $s_t$ and $s_{\text{pred}}$ separately.
+    \item \textbf{Shared-embedding regularization.} The covariance-weight
+    ablation (Section~\ref{sec:beta}) showed that increasing $\beta$ alone
+    does not restore effective rank. The most direct next step, suggested by
+    that result, is to apply the variance and covariance penalties to a
+    \emph{common} embedding---rather than to $s_t$ and $s_{\text{pred}}$
+    separately---so that the term sustaining variance and the term enforcing
+    decorrelation act on the same representation.
+    \item \textbf{Full-scale and on-device evaluation.} Run the existing
+    protocol on the complete CIFAR-10 benchmark (and larger datasets) and on
+    a defined edge device, to replace the subset results and CPU-only
+    measurements with full-scale and hardware-accurate figures.
     \item \textbf{Backbone scaling.} Evaluate whether the local objective
     remains stable with larger or transformer-based encoders.
     \item \textbf{True multi-agent extension.} Extend the single-node

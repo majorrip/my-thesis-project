@@ -3,15 +3,16 @@
 
 \begin{quote}
 \textbf{Scope of this evaluation.} The results below were produced by the
-accompanying \texttt{evaluate.py} on the two datasets described in
-Section~\ref{sec:datasets}. Both are non-standard: a procedurally generated
-\emph{structured} image set and the offline scikit-learn \emph{digits}
-dataset. They are used because the evaluation environment had no network
-access to standard vision benchmarks (e.g.\ CIFAR-10). Consequently, the
-numbers below are genuine measurements of the training dynamics and
-resource cost of the architecture, but they are \emph{not} benchmark
-accuracy results, and no classification accuracy is claimed. Evaluation on
-a standard benchmark remains future work (Chapter~\ref{chap:conclusion}).
+accompanying \texttt{evaluate.py} on the three datasets described in
+Section~\ref{sec:datasets}: a procedurally generated \emph{structured}
+image set, the offline scikit-learn \emph{digits} set, and a subset of the
+standard \emph{CIFAR-10} benchmark. The structured and digits runs were
+executed in the primary environment (a network-restricted cloud CPU) and
+independently reproduced on Google Colab; the CIFAR-10 run was performed on
+Colab, where the benchmark could be downloaded. All figures are genuine
+measurements of training dynamics and resource cost; no classification
+accuracy is claimed, as the evaluation is at the level of the
+self-supervised representation rather than a downstream classifier.
 \end{quote}
 
 \section{Research Questions}
@@ -25,12 +26,14 @@ a standard benchmark remains future work (Chapter~\ref{chap:conclusion}).
 \end{description}
 
 \section{Experimental Setup}
-All experiments were run on a single cloud CPU (two threads, no GPU) using
-PyTorch~2.14. The architecture and optimizer follow Chapter~\ref{chap:method}
-exactly (Table~\ref{tab:hparams}). Each configuration was trained with a
-single random seed; multi-seed repetition is noted as a limitation in
-Section~\ref{sec:threats}. Table~\ref{tab:setup} lists the run
-configuration.
+Experiments were run on CPU using PyTorch (version~2.14 in the primary cloud
+environment; the Colab reproduction used its default runtime). The
+architecture and optimizer follow Chapter~\ref{chap:method} exactly
+(Table~\ref{tab:hparams}). The primary runs use a fixed seed
+(\texttt{seed}$=0$); a five-seed robustness study quantifying run-to-run
+variance is reported in Section~\ref{sec:multiseed}. The structured and
+digits runs were additionally reproduced on an independent machine (Google Colab) to check reproducibility
+(Section~\ref{sec:repro}). Table~\ref{tab:setup} lists the run configuration.
 
 \begin{table}[htbp]
     \centering
@@ -40,12 +43,12 @@ configuration.
         \toprule
         \textbf{Item} & \textbf{Value} \\
         \midrule
-        Framework / device & PyTorch 2.14, CPU (2 threads) \\
+        Framework / device & PyTorch, CPU \\
         Optimizer & AdamW ($10^{-3}$, weight decay $10^{-4}$) \\
         Batch size & $64$ \\
-        Epochs (structured / digits) & $40$ / $25$ \\
-        Samples (structured / digits) & $768$ / $1797$ \\
-        Seeds & $1$ (single seed) \\
+        Epochs (structured / digits / CIFAR-10) & $40$ / $25$ / $15$ \\
+        Samples (structured / digits / CIFAR-10) & $768$ / $1797$ / $2000$ \\
+        Seeds & primary: $0$; robustness study: $\{0,1,2,3,4\}$ \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -64,6 +67,33 @@ real $8\times8$ images) is upsampled to $64\times64$ and replicated to
 three channels. It provides a small but \emph{real} data source available
 without network access, used as a sanity check. The same random masking is
 applied.
+
+\paragraph{CIFAR-10.} A subset of the standard CIFAR-10 benchmark ($2000$
+natural $32\times32$ images, upsampled to $64\times64$) is used to test
+whether the findings on the smaller datasets transfer to real natural
+images. It was run in the Colab environment where the benchmark could be
+downloaded. The same random masking and spatial-action construction are
+applied. A subset and a reduced epoch budget are used for tractability on
+CPU; a full-dataset run is left to future work.
+
+Figure~\ref{fig:samples} shows representative samples from the structured
+and digits datasets.
+The top row of each is the full image (the reconstruction target); the
+bottom row is the masked context view actually presented to the context
+encoder, together with the normalized bounding box $[x, y, w, h]$ supplied
+to the action encoder.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.92\textwidth]{images/sample_structured.png}\\[4pt]
+    \includegraphics[width=0.92\textwidth]{images/sample_digits.png}
+    \caption{Representative training samples. Top: the procedurally generated
+    \emph{structured} dataset. Bottom: the real scikit-learn \emph{digits}
+    dataset (upsampled from $8\times8$). In each pair, the ``Full'' row is
+    the target image and the ``Masked'' row is the context view with a
+    random region zeroed; the box label is the spatial action.}
+    \label{fig:samples}
+\end{figure}
 
 \section{Evaluation Metrics}
 Two collapse indicators are computed over the context embedding
@@ -109,9 +139,16 @@ Figure~\ref{fig:collapse} the collapse indicators.
         \multirow{2}{*}{Digits}
           & Unregularized ($\alpha{=}\beta{=}0$) & $0.0006$ & $0.0006$ & $0.080$ & $3.57$ \\
           & EdgeVerify (full)                    & $0.257$  & $0.207$  & $\mathbf{1.772}$ & $1.03$ \\
+        \midrule
+        \multirow{2}{*}{CIFAR-10}
+          & Unregularized ($\alpha{=}\beta{=}0$) & $0.0019$ & $0.0019$ & $0.223$ & $4.53$ \\
+          & EdgeVerify (full)                    & $0.231$  & ---      & $\mathbf{1.684}$ & $1.36$ \\
         \bottomrule
     \end{tabular}
 \end{table}
+The CIFAR-10 rows were obtained on Google Colab; the full-model
+$\mathcal{L}_{\text{distill}}$ component was not logged separately in that
+run and is marked ``---''.
 
 \begin{figure}[htbp]
     \centering
@@ -138,23 +175,26 @@ Figure~\ref{fig:collapse} the collapse indicators.
 \end{figure}
 
 The results are mixed and warrant careful reading. The variance regularizer
-is effective at its stated objective: the full model maintains
-$\bar\sigma \approx 1.55$--$1.77$, at or above the hinge threshold
-$\gamma = 1.0$ (its final variance-loss term reaches $\approx 0$), whereas
-the unregularized baseline collapses toward low per-dimension variance
-($\bar\sigma = 0.245$ and $0.080$). This directly confirms that the
-variance term prevents the low-variance mode of collapse.
+is effective at its stated objective: across all three datasets the full
+model maintains $\bar\sigma \approx 1.55$--$1.77$ (structured, digits) and
+$1.68$ on CIFAR-10, at or above the hinge threshold $\gamma = 1.0$, whereas
+the corresponding unregularized baselines collapse toward low per-dimension
+variance ($\bar\sigma = 0.245$, $0.080$, and $0.223$). This directly
+confirms that the variance term prevents the low-variance mode of collapse.
 
 However, the \emph{effective rank} tells the opposite story: the full model
-attains a very low effective rank ($1.64$ and $1.03$ out of $256$), and it
-is in fact \emph{lower} than the unregularized baseline ($6.46$ and $3.57$).
+attains a very low effective rank ($1.64$, $1.03$, and $1.36$ out of $256$
+for structured, digits, and CIFAR-10), and in every case it is \emph{lower}
+than the corresponding unregularized baseline ($6.46$, $3.57$, and $4.53$).
 High per-dimension variance therefore coexists with strongly correlated
 dimensions---a rank-deficient representation. At the code's covariance
 weight $\beta = 0.01$, the decorrelation term is too weak to counteract this,
 which is consistent with the growing covariance component visible in
 Figure~\ref{fig:losscurves}. \textbf{The regularization as configured
 prevents variance collapse but does not, on this evidence, prevent
-dimensional (rank) collapse.}
+dimensional (rank) collapse.} Crucially, this pattern is reproduced on the
+CIFAR-10 natural-image subset, indicating that it is not an artifact of the
+synthetic or low-resolution data.
 
 \subsection{Efficiency (RQ2)}
 Table~\ref{tab:efficiency} reports the model's cost. The architecture is
@@ -168,27 +208,162 @@ achieves single-sample inference in roughly $2$~ms on CPU.
     coarse proxy; the model's own parameter memory is the meaningful
     edge-relevant figure.}
     \label{tab:efficiency}
+    \setlength{\tabcolsep}{9pt}
     \begin{tabular}{lcccc}
         \toprule
-        \textbf{Data} & \textbf{Params} & \textbf{Param mem.\ (MB)} &
+        \textbf{Data} & \textbf{Params} & \textbf{Mem.\ (MB)} &
         \textbf{Latency (ms)} & \textbf{Peak RSS (MB)} \\
         \midrule
         Structured & $745{,}536$ & $2.84$ & $2.04 \pm 0.11$ & $852$ \\
         Digits     & $745{,}536$ & $2.84$ & $2.48 \pm 0.53$ & $1099$ \\
+        CIFAR-10   & $745{,}536$ & $2.84$ & $2.58$ & --- \\
         \bottomrule
     \end{tabular}
 \end{table}
+The parameter count and memory are architecture-fixed and identical across
+datasets. Latency is CPU wall-clock and environment-dependent; the CIFAR-10
+figure is from Colab (its per-run standard deviation and peak RSS were not
+recorded).
+
+\subsection{Independent Reproduction}
+\label{sec:repro}
+The structured and digits experiments were re-executed from the same source
+on Google Colab (a distinct machine and software stack). The collapse
+indicators reproduced closely: the mechanism-level conclusions were
+identical, and the metrics matched within run-to-run variation
+(Table~\ref{tab:repro}). The largest discrepancy was the digits full-model
+$\bar\sigma$ ($1.77$ original vs.\ $1.42$ on Colab), while the effective-rank
+ordering---the finding of interest---was preserved in every case. This
+supports the reproducibility of the reported results.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Reproduction check: original (cloud) vs.\ independent (Colab)
+    runs. Effective-rank ordering (full $<$ unregularized) is preserved
+    throughout.}
+    \label{tab:repro}
+    \begin{tabular}{llcc}
+        \toprule
+        \textbf{Data / Model} & \textbf{Metric} & \textbf{Original} & \textbf{Colab} \\
+        \midrule
+        Structured, full          & $\bar\sigma$ / rank & $1.549$ / $1.64$ & $1.551$ / $1.61$ \\
+        Structured, unregularized & $\bar\sigma$ / rank & $0.245$ / $6.46$ & $0.244$ / $6.48$ \\
+        Digits, full              & $\bar\sigma$ / rank & $1.772$ / $1.03$ & $1.418$ / $1.05$ \\
+        Digits, unregularized     & $\bar\sigma$ / rank & $0.080$ / $3.57$ & $0.079$ / $3.65$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Robustness Across Seeds}
+\label{sec:multiseed}
+To quantify sensitivity to training stochasticity, the structured and digits
+experiments were repeated over five random seeds (data content held fixed;
+the seed varies weight initialization and minibatch order).
+Table~\ref{tab:multiseed} and Figure~\ref{fig:multiseed} report the mean and
+standard deviation of the collapse indicators. The separation between the
+full model and the unregularized baseline is consistent across seeds: on both
+datasets the error bars for effective rank do not overlap, and the direction
+of every comparison is preserved. The single-seed results reported above are
+therefore representative rather than incidental. The five-seed means were
+additionally reproduced on the independent Colab run (e.g.\ structured full
+effective rank $1.99 \pm 0.25$ vs.\ $1.99 \pm 0.24$ here).
+
+\begin{table}[htbp]
+    \centering
+    \caption{Collapse indicators over five seeds (mean $\pm$ std). The
+    full-vs-unregularized ordering holds for every seed on both datasets.}
+    \label{tab:multiseed}
+    \begin{tabular}{llcc}
+        \toprule
+        \textbf{Data} & \textbf{Model} & $\bar\sigma$ & \textbf{Eff.\ rank} \\
+        \midrule
+        \multirow{2}{*}{Structured}
+          & Unregularized     & $0.251 \pm 0.005$ & $6.58 \pm 0.41$ \\
+          & EdgeVerify (full) & $1.449 \pm 0.068$ & $1.99 \pm 0.24$ \\
+        \midrule
+        \multirow{2}{*}{Digits}
+          & Unregularized     & $0.082 \pm 0.004$ & $3.30 \pm 0.33$ \\
+          & EdgeVerify (full) & $1.464 \pm 0.237$ & $1.05 \pm 0.02$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.49\textwidth]{images/multiseed_structured.png}
+    \hfill
+    \includegraphics[width=0.49\textwidth]{images/multiseed_digits.png}
+    \caption{Collapse indicators over five seeds (mean $\pm$ std). Error bars
+    for effective rank do not overlap between the two models on either
+    dataset.}
+    \label{fig:multiseed}
+\end{figure}
+
+\subsection{Covariance-Weight Ablation}
+\label{sec:beta}
+The low effective rank of the full model raises the question of whether it is
+simply a consequence of an under-weighted covariance term. To test this, the
+covariance weight $\beta$ was swept over four orders of magnitude on the
+structured dataset with the variance weight fixed ($\alpha = 1.0$);
+Table~\ref{tab:beta} and Figure~\ref{fig:beta} report the outcome.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Covariance-weight ($\beta$) ablation on structured data
+    ($\alpha = 1.0$, single seed). Increasing $\beta$ raises effective rank
+    monotonically, but by a small margin.}
+    \label{tab:beta}
+    \begin{tabular}{ccc}
+        \toprule
+        $\beta$ & $\bar\sigma$ & \textbf{Eff.\ rank} \\
+        \midrule
+        $0.01$ (default) & $1.551$ & $1.61$ \\
+        $0.10$           & $1.567$ & $1.82$ \\
+        $1.00$           & $1.567$ & $1.96$ \\
+        $10.0$           & $1.471$ & $2.19$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/beta_ablation.png}
+    \caption{Covariance-weight ablation. Effective rank increases
+    monotonically with $\beta$ but remains far below the unregularized
+    baseline ($\sim 6.5$, dashed) even at $\beta = 10$; mean embedding
+    standard deviation is essentially unaffected.}
+    \label{fig:beta}
+\end{figure}
+
+The ablation is informative in a negative sense. Increasing $\beta$ does move
+effective rank in the expected direction---monotonically, from $1.61$ at the
+default to $2.19$ at $\beta = 10$ (a $1000\times$ increase)---confirming that
+the covariance term is directionally effective. However, the magnitude is
+small: even at $\beta = 10$ the effective rank ($2.19$) remains far below both
+the unregularized baseline ($\sim 6.5$) and the $256$-dimensional ceiling,
+while $\bar\sigma$ stays essentially constant. Rank collapse is therefore
+\emph{not} attributable merely to an under-weighted covariance penalty.
+A more likely cause is structural: the variance and covariance penalties are
+applied to \emph{different} tensors (the context embedding $s_t$ and the
+prediction $s_{\text{pred}}$; Chapter~\ref{chap:method}), so the term that
+sustains variance and the term that decorrelates never act on the same
+representation. Testing a formulation that applies both penalties to a common
+embedding is identified as the principal next step
+(Chapter~\ref{chap:conclusion}).
 
 \section{Discussion}
 On RQ1, the evidence is partial: the variance constraint demonstrably
 mitigates variance collapse, but at $\beta = 0.01$ the covariance constraint
 does not yield a high-rank representation, and the unregularized baseline is
-paradoxically higher-rank. A plausible explanation is that the variance and
+paradoxically higher-rank---a pattern that holds on the CIFAR-10 natural-image
+subset as well as on the smaller datasets. A plausible explanation is that the variance and
 covariance penalties act on different tensors (the context embedding $s_t$
 and the prediction $s_{\text{pred}}$, respectively; Chapter~\ref{chap:method})
-and that the covariance weight is an order of magnitude too small relative to
-the variance weight. This motivates a dedicated $\beta$ ablation, listed as
-future work. On RQ2, the architecture is genuinely lightweight ($2.84$~MB of
+and that the covariance weight is small relative to the variance weight. The
+covariance-weight ablation (Section~\ref{sec:beta}) tests this directly and
+shows that increasing $\beta$ alone is insufficient to restore rank, which
+points to the different-tensors structure as the underlying cause rather than
+mere mis-weighting. On RQ2, the architecture is genuinely lightweight ($2.84$~MB of
 parameters, millisecond CPU inference), supporting its suitability for
 edge deployment in terms of size. On RQ3, the distillation term converges
 rapidly in all cases; the full objective's total loss is non-monotonic
@@ -203,11 +378,14 @@ and why the collapse indicators are necessary.
 
 \section{Threats to Validity}
 \label{sec:threats}
-Several factors limit the strength of these conclusions: (i) the datasets are
-non-standard (synthetic structured images and low-resolution real digits),
-so results may not transfer to natural-image benchmarks; (ii) each
-configuration was run with a single seed, so run-to-run variance is not
-quantified; (iii) all measurements are CPU-only, so latency and memory would
-differ on target embedded hardware; and (iv) the encoder is small relative to
-the transformer backbones typical of the JEPA literature. Addressing these is
-the subject of Chapter~\ref{chap:conclusion}.
+The following factors were examined and, where possible, addressed.
+Run-to-run variance, initially a concern, has been \emph{quantified}: the
+five-seed study (Section~\ref{sec:multiseed}) shows the finding is stable and
+the full-vs-unregularized separation holds for every seed. Two factors remain
+open. First, the benchmark coverage is partial: two of the three datasets are
+non-standard, and the CIFAR-10 evaluation used a $2000$-image subset with a
+reduced epoch budget rather than the full benchmark. Second, all measurements
+are CPU-only, so latency and memory would differ on target embedded hardware,
+and the encoder is small relative to the transformer backbones typical of the
+JEPA literature. Addressing these is the subject of
+Chapter~\ref{chap:conclusion}.
