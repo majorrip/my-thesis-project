@@ -1,0 +1,66 @@
+{
+  "structured": {
+    "unregularized": {
+      "config": {
+        "alpha": 0.0,
+        "beta": 0.0,
+        "shared_cov": false
+      },
+      "sigma_bar": 0.2453,
+      "effective_rank": 6.46,
+      "probe_accuracy": null
+    },
+    "full": {
+      "config": {
+        "alpha": 1.0,
+        "beta": 0.01,
+        "shared_cov": false
+      },
+      "sigma_bar": 1.5487,
+      "effective_rank": 1.638,
+      "probe_accuracy": null
+    },
+    "shared": {
+      "config": {
+        "alpha": 1.0,
+        "beta": 1.0,
+        "shared_cov": true
+      },
+      "sigma_bar": 0.3109,
+      "effective_rank": 47.442,
+      "probe_accuracy": null
+    }
+  },
+  "digits": {
+    "unregularized": {
+      "config": {
+        "alpha": 0.0,
+        "beta": 0.0,
+        "shared_cov": false
+      },
+      "sigma_bar": 0.0799,
+      "effective_rank": 3.571,
+      "probe_accuracy": 0.9444
+    },
+    "full": {
+      "config": {
+        "alpha": 1.0,
+        "beta": 0.01,
+        "shared_cov": false
+      },
+      "sigma_bar": 1.7719,
+      "effective_rank": 1.034,
+      "probe_accuracy": 0.5611
+    },
+    "shared": {
+      "config": {
+        "alpha": 1.0,
+        "beta": 1.0,
+        "shared_cov": true
+      },
+      "sigma_bar": 0.2918,
+      "effective_rank": 34.151,
+      "probe_accuracy": 0.937
+    }
+  }
+}

@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 def compute_stable_local_loss(projected_student, teacher_target, layer_output,
                               variance_threshold=1.0, alpha=1.0, beta=0.01,
+                              shared_cov=False, var_on="context", cov_on=None,
                               return_components=False):
     """
     Computes regularized local distillation loss using VicReg-style constraints
@@ -15,19 +16,36 @@ def compute_stable_local_loss(projected_student, teacher_target, layer_output,
     unregularized baseline (alpha=beta=0) required for the collapse ablation
     can share this single code path. Set return_components=True to obtain the
     per-term breakdown for logging.
+
+    Placement of the two regularizers is configurable, to support the
+    regularizer-placement study. ``var_on`` and ``cov_on`` each select the
+    tensor a penalty acts on: ``"context"`` = the context embedding
+    ``layer_output`` (s_t), ``"pred"`` = the predictor output
+    ``projected_student`` (s_pred).
+
+    Backward compatibility: ``var_on`` defaults to ``"context"``. If ``cov_on``
+    is left as ``None`` it is resolved from ``shared_cov`` -- ``"context"`` when
+    ``shared_cov=True`` (the shared-embedding variant), otherwise ``"pred"``
+    (the original wiring). An explicit ``cov_on`` overrides ``shared_cov``.
     """
+    tensors = {"context": layer_output, "pred": projected_student}
+    if cov_on is None:
+        cov_on = "context" if shared_cov else "pred"
+    var_tensor = tensors[var_on]
+    cov_tensor = tensors[cov_on]
+
     # 1. Base Distillation Loss (MSE against target)
     distill_loss = F.mse_loss(projected_student, teacher_target)
 
     # 2. Variance Constraint (Hinge loss on batch standard deviation)
-    std_student = torch.sqrt(layer_output.var(dim=0) + 1e-4)
+    std_student = torch.sqrt(var_tensor.var(dim=0) + 1e-4)
     variance_loss = torch.mean(F.relu(variance_threshold - std_student))
 
     # 3. Covariance Regularization (Feature decorrelation)
-    centered_student = projected_student - projected_student.mean(dim=0)
-    batch_size = projected_student.size(0)
+    centered_student = cov_tensor - cov_tensor.mean(dim=0)
+    batch_size = cov_tensor.size(0)
     cov_matrix = (centered_student.T @ centered_student) / (batch_size - 1)
-    diag_mask = torch.eye(cov_matrix.size(0), device=projected_student.device)
+    diag_mask = torch.eye(cov_matrix.size(0), device=cov_tensor.device)
     covariance_loss = (cov_matrix * (1 - diag_mask)).pow(2).sum() / cov_matrix.size(0)
 
     total = distill_loss + alpha * variance_loss + beta * covariance_loss

@@ -43,7 +43,8 @@ def set_seed(seed):
     np.random.seed(seed)
 
 
-def train_model(dataset, epochs, alpha, beta, batch_size=64, lr=1e-3, wd=1e-4, seed=0):
+def train_model(dataset, epochs, alpha, beta, batch_size=64, lr=1e-3, wd=1e-4, seed=0,
+                shared_cov=False, var_on="context", cov_on=None):
     set_seed(seed)
     device = torch.device("cpu")
     model = VisionJEPA().to(device)
@@ -61,7 +62,9 @@ def train_model(dataset, epochs, alpha, beta, batch_size=64, lr=1e-3, wd=1e-4, s
             s_pred, s_tgt, s_t = model(partial, full, action)
             loss, comps = compute_stable_local_loss(
                 s_pred, s_tgt.detach(), s_t,
-                variance_threshold=1.0, alpha=alpha, beta=beta, return_components=True)
+                variance_threshold=1.0, alpha=alpha, beta=beta,
+                shared_cov=shared_cov, var_on=var_on, cov_on=cov_on,
+                return_components=True)
             loss.backward()
             optimizer.step()
             model.update_target_encoder()

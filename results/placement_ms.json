@@ -1,0 +1,169 @@
+{
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "alpha": 1.0,
+  "beta": 1.0,
+  "results": {
+    "structured": {
+      "var s_t, cov s_pred (original)": {
+        "effective_rank": {
+          "mean": 2.191,
+          "std": 0.148,
+          "values": [
+            1.978,
+            2.092,
+            2.17,
+            2.365,
+            2.347
+          ]
+        },
+        "probe_accuracy": null
+      },
+      "var s_t, cov s_t (shared)": {
+        "effective_rank": {
+          "mean": 45.935,
+          "std": 1.224,
+          "values": [
+            47.442,
+            43.917,
+            46.606,
+            45.269,
+            46.44
+          ]
+        },
+        "probe_accuracy": null
+      },
+      "var s_pred, cov s_pred": {
+        "effective_rank": {
+          "mean": 7.748,
+          "std": 0.169,
+          "values": [
+            7.588,
+            8.068,
+            7.688,
+            7.751,
+            7.643
+          ]
+        },
+        "probe_accuracy": null
+      },
+      "var s_pred, cov s_t (swapped)": {
+        "effective_rank": {
+          "mean": 11.445,
+          "std": 0.16,
+          "values": [
+            11.731,
+            11.254,
+            11.362,
+            11.474,
+            11.404
+          ]
+        },
+        "probe_accuracy": null
+      }
+    },
+    "digits": {
+      "var s_t, cov s_pred (original)": {
+        "effective_rank": {
+          "mean": 1.021,
+          "std": 0.007,
+          "values": [
+            1.018,
+            1.011,
+            1.03,
+            1.021,
+            1.026
+          ]
+        },
+        "probe_accuracy": {
+          "mean": 0.618,
+          "std": 0.027,
+          "values": [
+            0.637,
+            0.57,
+            0.65,
+            0.619,
+            0.615
+          ]
+        }
+      },
+      "var s_t, cov s_t (shared)": {
+        "effective_rank": {
+          "mean": 34.532,
+          "std": 0.204,
+          "values": [
+            34.151,
+            34.661,
+            34.681,
+            34.491,
+            34.678
+          ]
+        },
+        "probe_accuracy": {
+          "mean": 0.938,
+          "std": 0.007,
+          "values": [
+            0.937,
+            0.941,
+            0.948,
+            0.937,
+            0.928
+          ]
+        }
+      },
+      "var s_pred, cov s_pred": {
+        "effective_rank": {
+          "mean": 9.192,
+          "std": 1.524,
+          "values": [
+            9.616,
+            6.346,
+            9.409,
+            10.953,
+            9.635
+          ]
+        },
+        "probe_accuracy": {
+          "mean": 0.907,
+          "std": 0.011,
+          "values": [
+            0.92,
+            0.887,
+            0.906,
+            0.911,
+            0.911
+          ]
+        }
+      },
+      "var s_pred, cov s_t (swapped)": {
+        "effective_rank": {
+          "mean": 4.375,
+          "std": 0.432,
+          "values": [
+            4.71,
+            4.612,
+            4.318,
+            4.676,
+            3.557
+          ]
+        },
+        "probe_accuracy": {
+          "mean": 0.929,
+          "std": 0.006,
+          "values": [
+            0.933,
+            0.931,
+            0.933,
+            0.926,
+            0.919
+          ]
+        }
+      }
+    }
+  }
+}

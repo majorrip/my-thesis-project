@@ -1,0 +1,9 @@
+{
+  "dataset": "cifar10_subset",
+  "note": "Google Colab. Linear probe (10-class, chance=0.10). N=2000 images, 15 epochs, single seed. Absolute accuracy low due to small setup; read relative ordering.",
+  "configs": {
+    "unregularized":    {"alpha": 0.0, "beta": 0.0, "shared_cov": false, "effective_rank": 4.59, "sigma_bar": 0.226, "probe_accuracy": 0.415},
+    "original_full":    {"alpha": 1.0, "beta": 0.01, "shared_cov": false, "effective_rank": 1.34, "sigma_bar": 1.688, "probe_accuracy": 0.313},
+    "shared_embedding": {"alpha": 1.0, "beta": 1.0, "shared_cov": true, "effective_rank": 39.24, "sigma_bar": 0.288, "probe_accuracy": 0.405}
+  }
+}

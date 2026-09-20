@@ -43,6 +43,36 @@ terms of VICReg. The distinction in this work is that the regularizers are
 applied within a \emph{local, layer-wise distillation} objective rather
 than a single global loss.
 
+\section{Analyses of Representation Collapse and Decorrelation}
+\label{sec:collapse-lit}
+A parallel body of work analyses collapse itself. Jing et al.
+\cite{jing2022understanding} give a linear-model account of
+\emph{dimensional collapse} in contrastive SSL, showing that embeddings can
+occupy a low-dimensional subspace even when a global collapse is avoided.
+Hua et al. \cite{hua2021feature} identify feature decorrelation as the key
+mechanism and propose explicit decorrelation to counteract it. Most directly
+relevant to this thesis, two works study \emph{where} decorrelation must act
+in non-contrastive (BYOL/SimSiam-style) architectures: Li et al.
+\cite{li2022understanding} and Liu et al. \cite{liu2022bridging} connect the
+predictor and stop-gradient asymmetry to an implicit decorrelation and
+analyse the conditions under which the representation collapses.
+
+This thesis is closest to that last group, and it is important to state the
+relationship precisely: prior work has \emph{already established}, for
+Siamese non-contrastive methods, that the placement of the decorrelation
+mechanism governs collapse. The present work does not discover that
+phenomenon; it extends it along three axes that the prior analyses do not
+cover. First, the setting is a \emph{predictive} JEPA with an
+action-conditioned predictor and an \emph{explicit} VICReg-style
+variance-plus-covariance objective, rather than a Siamese network with
+implicit decorrelation. Second, we show that the failure is \emph{invisible}
+to both the training loss and the VICReg variance criterion---a diagnostic
+observation not emphasised in that work---and validate representation quality
+with a downstream linear probe. Third, we test whether the correct placement
+\emph{transfers to decentralized (federated) training}. The contribution is
+therefore an extension of an established collapse phenomenon to a new
+architecture and training regime, not a new phenomenon.
+
 \section{Joint-Embedding Predictive Architectures}
 LeCun's position paper on autonomous machine intelligence
 \cite{lecun2022path} argues for prediction in representation space as a
@@ -87,10 +117,15 @@ described in the next chapter.
 \section{Summary and Research Gap}
 The reviewed literature establishes (i) that negative-free SSL is feasible
 via EMA targets and predictors, (ii) that explicit variance/covariance
-regularization prevents collapse without negatives, and (iii) that JEPAs
-avoid the cost of generative decoding. What remains underexplored is the
-combination of these ideas under the memory constraints of a single edge
-or Dew node, where the training graph itself must be bounded. EdgeVerify
-addresses this gap by uniting an action-conditioned JEPA, a VICReg-style
-anti-collapse objective, and local layer-wise gradient isolation into a
-single architecture intended for on-device execution.
+regularization prevents collapse without negatives, (iii) that JEPAs
+avoid the cost of generative decoding, and (iv) that, in Siamese
+non-contrastive methods, the placement of the decorrelation mechanism
+governs collapse \cite{li2022understanding, liu2022bridging}. What remains
+underexplored---and what this thesis addresses---is (a) whether the same
+placement effect holds in an \emph{explicitly} regularized predictive JEPA,
+(b) that the failure is invisible to the training loss and the variance
+criterion and must be detected by effective rank and a downstream probe, and
+(c) whether the corrected placement survives \emph{decentralized} training on
+edge nodes. The thesis therefore extends an established collapse phenomenon
+to the JEPA and federated settings, using an action-conditioned architecture
+intended for on-device execution.

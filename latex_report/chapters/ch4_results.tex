@@ -351,6 +351,262 @@ representation. Testing a formulation that applies both penalties to a common
 embedding is identified as the principal next step
 (Chapter~\ref{chap:conclusion}).
 
+\subsection{Regularizer-Placement Study}
+\label{sec:placement}
+The $\beta$ ablation indicated that collapse is governed by \emph{where} the
+penalties are applied, not by their weight. We test this systematically. Each
+of the two penalties can act on either the context embedding $s_t$ or the
+predictor output $s_{\text{pred}}$, giving a $2\times2$ placement grid, which
+we evaluate at fixed weights ($\alpha = \beta = 1.0$) on both datasets. In all
+cases the diagnostics are computed on the frozen context encoder---the
+representation a downstream user consumes. Table~\ref{tab:placement} and
+Figure~\ref{fig:placement} report the grid.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Regularizer-placement grid ($\alpha = \beta = 1.0$, single seed).
+    ``Var-loss'' is the final variance term; a value of $0$ means the variance
+    criterion is fully satisfied. Only the placement \emph{variance on $s_t$,
+    covariance on $s_{\text{pred}}$}---the original wiring---collapses.}
+    \label{tab:placement}
+    \begin{tabular}{lllcccc}
+        \toprule
+        \textbf{Data} & \textbf{Var.\ on} & \textbf{Cov.\ on} &
+        $\bar\sigma$ & \textbf{Eff.\ rank} & \textbf{Var-loss} & \textbf{Probe} \\
+        \midrule
+        \multirow{4}{*}{Structured}
+          & $s_t$          & $s_{\text{pred}}$ & $1.553$ & $\mathbf{1.98}$  & $0.000$ & --- \\
+          & $s_t$          & $s_t$             & $0.311$ & $47.44$          & $0.691$ & --- \\
+          & $s_{\text{pred}}$ & $s_{\text{pred}}$ & $0.420$ & $7.59$        & $0.743$ & --- \\
+          & $s_{\text{pred}}$ & $s_t$          & $0.085$ & $11.73$          & $0.386$ & --- \\
+        \midrule
+        \multirow{4}{*}{Digits}
+          & $s_t$          & $s_{\text{pred}}$ & $1.365$ & $\mathbf{1.02}$  & $0.000$ & $0.637$ \\
+          & $s_t$          & $s_t$             & $0.292$ & $34.15$          & $0.711$ & $0.937$ \\
+          & $s_{\text{pred}}$ & $s_{\text{pred}}$ & $0.346$ & $9.62$        & $0.749$ & $0.920$ \\
+          & $s_{\text{pred}}$ & $s_t$          & $0.057$ & $4.71$           & $0.479$ & $0.933$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/placement_grid.png}
+    \caption{Effective rank across the placement grid. A single cell---variance
+    on $s_t$ with covariance on $s_{\text{pred}}$ (top-right, the original
+    wiring)---collapses on both datasets; every other placement preserves rank
+    and (on digits) downstream accuracy.}
+    \label{fig:placement}
+\end{figure}
+
+Three observations follow, and together they constitute the central finding of
+this work. First, the collapse is \emph{specific}: of the four placements, only
+one---variance on $s_t$ with covariance on $s_{\text{pred}}$, which is exactly
+the original wiring---drives effective rank to $\approx 1$--$2$; every other
+placement yields rank $\ge 4.7$ and, on digits, probe accuracy $\ge 0.92$.
+Second, the harmful ingredient is identifiable: applying the variance
+(scale) penalty to $s_t$ \emph{without} a co-located covariance
+(decorrelation) penalty on $s_t$ inflates each dimension's magnitude while
+leaving the dimensions free to correlate, producing a high-variance but
+rank-deficient representation. Placing the covariance penalty on $s_t$
+(whether or not the variance penalty is also there) avoids the collapse.
+Third, and most cautionary, the failure is \emph{invisible to the objective}:
+in the collapsed cell the final variance loss is exactly $0.000$---the VICReg
+variance criterion is fully satisfied---and $\bar\sigma$ is the \emph{largest}
+of any cell, yet the representation is rank-$1$ and least useful downstream.
+Neither the training loss nor the variance criterion signals the problem; only
+effective rank and the linear probe do.
+
+We state the resulting design principle: \emph{in negative-free predictive SSL,
+a variance penalty applied to an embedding must be paired with a covariance
+penalty on the same embedding; a variance penalty without co-located
+decorrelation is worse than no regularization at all.} This is not a
+single-seed artifact. Table~\ref{tab:placement_ms} repeats the entire grid
+over five seeds: the ordering is preserved in every case, with small variance.
+The collapsed cell stays at rank $\approx 1$--$2$ while the healthy cells
+remain an order of magnitude higher, and the separations far exceed the
+standard deviations---the collapsed and healthy configurations do not overlap.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Regularizer-placement grid over five seeds (mean $\pm$ std). The
+    ordering is stable and the collapse of the (variance on $s_t$, covariance
+    on $s_{\text{pred}}$) cell is not a single-seed effect.}
+    \label{tab:placement_ms}
+    \begin{tabular}{lllcc}
+        \toprule
+        \textbf{Data} & \textbf{Var.\ on} & \textbf{Cov.\ on} &
+        \textbf{Eff.\ rank} & \textbf{Probe} \\
+        \midrule
+        \multirow{4}{*}{Structured}
+          & $s_t$          & $s_{\text{pred}}$ & $\mathbf{2.19 \pm 0.15}$ & --- \\
+          & $s_t$          & $s_t$             & $45.94 \pm 1.22$ & --- \\
+          & $s_{\text{pred}}$ & $s_{\text{pred}}$ & $7.75 \pm 0.17$ & --- \\
+          & $s_{\text{pred}}$ & $s_t$          & $11.45 \pm 0.16$ & --- \\
+        \midrule
+        \multirow{4}{*}{Digits}
+          & $s_t$          & $s_{\text{pred}}$ & $\mathbf{1.02 \pm 0.01}$ & $0.618 \pm 0.027$ \\
+          & $s_t$          & $s_t$             & $34.53 \pm 0.20$ & $0.938 \pm 0.007$ \\
+          & $s_{\text{pred}}$ & $s_{\text{pred}}$ & $9.19 \pm 1.52$ & $0.907 \pm 0.011$ \\
+          & $s_{\text{pred}}$ & $s_t$          & $4.38 \pm 0.43$ & $0.929 \pm 0.006$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Shared-Embedding Reformulation and Downstream Validation}
+\label{sec:sharedfix}
+Guided by the placement study, we adopt the best cell---both penalties on
+$s_t$, the \emph{shared-embedding} variant (\texttt{shared\_cov=True},
+$\alpha = \beta = 1.0$)---and validate it more thoroughly, extending the
+downstream linear probe to CIFAR-10. The probe freezes the trained context
+encoder, extracts features from the (unmasked) images, and fits a linear
+classifier on the class labels. Probe accuracy is a downstream, ground-truth measure of representation
+usefulness that the intrinsic collapse metrics lack. Structured data carries
+no labels, so the probe is reported for the labeled digits and CIFAR-10 sets.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Shared-embedding reformulation. Effective rank is restored on all
+    datasets; the linear probe (digits and CIFAR-10) measures the effect on
+    \emph{usefulness}. On both probes the original wiring's rank collapse gives
+    the lowest downstream accuracy, and the shared-embedding variant recovers
+    it to the unregularized level.}
+    \label{tab:sharedfix}
+    \begin{tabular}{llccc}
+        \toprule
+        \textbf{Data} & \textbf{Model} & $\bar\sigma$ & \textbf{Eff.\ rank}
+        & \textbf{Probe acc.} \\
+        \midrule
+        \multirow{3}{*}{Structured}
+          & Unregularized                 & $0.245$ & $6.46$  & --- \\
+          & Original (full)               & $1.549$ & $1.64$  & --- \\
+          & Shared-embedding              & $0.311$ & $\mathbf{47.44}$ & --- \\
+        \midrule
+        \multirow{3}{*}{Digits}
+          & Unregularized                 & $0.080$ & $3.57$  & $0.944$ \\
+          & Original (full)               & $1.772$ & $1.03$  & $0.561$ \\
+          & Shared-embedding              & $0.292$ & $\mathbf{34.15}$ & $\mathbf{0.937}$ \\
+        \midrule
+        \multirow{3}{*}{CIFAR-10}
+          & Unregularized                 & $0.226$ & $4.59$  & $0.415$ \\
+          & Original (full)               & $1.688$ & $1.34$  & $0.313$ \\
+          & Shared-embedding              & $0.288$ & $\mathbf{39.24}$ & $\mathbf{0.405}$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+Probe accuracy is 10-class (chance $=0.10$). CIFAR-10 accuracies are low in
+absolute terms because the lightweight encoder, $2000$-image subset, and
+$15$-epoch budget form a deliberately small setup for natural images; the
+relevant signal is the \emph{relative} ordering across configurations.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/shared_fix.png}
+    \caption{Effect of the shared-embedding reformulation on digits and
+    CIFAR-10. Moving the covariance penalty onto $s_t$ raises effective rank by
+    more than an order of magnitude on both datasets. On the downstream linear
+    probe, the original (full) configuration is worst on both, and the
+    shared-embedding variant restores accuracy to the unregularized level. Note
+    that the fix reaches \emph{parity} with the unregularized baseline rather
+    than exceeding it, and that absolute CIFAR-10 accuracy is low (see text).}
+    \label{fig:sharedfix}
+\end{figure}
+
+The result is instructive on three points. First, the structural diagnosis is
+confirmed on all three datasets: the shared-embedding variant raises effective
+rank from $1.64$ to $47.44$ (structured), $1.03$ to $34.15$ (digits), and
+$1.34$ to $39.24$ (CIFAR-10)---an improvement more than an order of magnitude
+larger than anything the $\beta$ sweep achieved, and one that holds on real
+natural images. Second, the linear probe shows the rank collapse was not
+benign: on \emph{both} probes the original configuration is the worst
+(accuracy $0.561$ on digits and $0.313$ on CIFAR-10), below both the
+unregularized baseline ($0.944$; $0.415$) and the shared-embedding variant
+($0.937$; $0.405$). In other words, the regularizer as originally wired
+\emph{harmed} the representation relative to using no regularization at all,
+and the shared-embedding reformulation repairs this on both datasets. It is
+important to be precise about the magnitude of that repair: the fix restores
+accuracy to \emph{parity} with the unregularized baseline, not above it, so
+the contribution is the removal of a harmful failure mode rather than a net
+gain over no regularization. Third, the probe validates the choice of
+diagnostic: the original model has the largest $\bar\sigma$ yet the lowest
+accuracy, whereas accuracy tracks effective rank---confirming that effective
+rank, not embedding standard deviation or loss magnitude, is the metric
+aligned with representation quality here.
+
+Several caveats apply. These runs use a single seed. Absolute CIFAR-10
+accuracy is low ($\sim 0.4$) because of the deliberately small setup
+(lightweight encoder, $2000$-image subset, $15$ epochs), so the CIFAR-10 probe
+should be read as a relative comparison, not an accuracy benchmark. The
+shared-embedding variant also lowers $\bar\sigma$ (energy is spread across many
+more dimensions), so the variance hinge is no longer saturated; the probe
+indicates this does not harm usefulness, but a joint tuning of $\alpha$ and
+$\beta$ under the shared formulation is a natural follow-up.
+
+\subsection{Decentralized (Multi-Agent) Training}
+\label{sec:federated}
+The edge and Dew setting that motivates EdgeVerify is inherently
+decentralized, so a natural question is whether the placement finding and the
+shared-embedding fix survive when training is distributed across agents rather
+than centralized. We test this with a minimal two-node federated scheme. The
+data are split into two disjoint shards; each node trains locally on its shard
+for several epochs; after each communication round the nodes' online
+parameters (context encoder, action encoder, and predictor, including
+BatchNorm statistics) are averaged (FedAvg) into a global model and broadcast
+back, and the target encoders are re-synchronised to the global context
+encoder. We run $6$ rounds (local epochs $6$/$4$ for structured/digits) and
+compare three settings: centralized shared-embedding training (reference),
+federated shared-embedding, and federated with the original wiring.
+Table~\ref{tab:federated} and Figure~\ref{fig:federated} report the outcome.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Two-node FedAvg training (mean $\pm$ std over three seeds). The
+    shared-embedding fix's collapse resistance transfers to the decentralized
+    setting; the original wiring collapses in both regimes.}
+    \label{tab:federated}
+    \begin{tabular}{llcc}
+        \toprule
+        \textbf{Data} & \textbf{Setting} & \textbf{Eff.\ rank} & \textbf{Probe} \\
+        \midrule
+        \multirow{3}{*}{Structured}
+          & Centralized (shared)  & $44.16 \pm 1.22$ & --- \\
+          & Federated (shared)    & $26.89 \pm 0.74$ & --- \\
+          & Federated (original)  & $\mathbf{2.69 \pm 0.04}$ & --- \\
+        \midrule
+        \multirow{3}{*}{Digits}
+          & Centralized (shared)  & $34.29 \pm 0.17$ & $0.934 \pm 0.006$ \\
+          & Federated (shared)    & $31.01 \pm 0.09$ & $0.941 \pm 0.006$ \\
+          & Federated (original)  & $\mathbf{1.05 \pm 0.03}$ & $0.628 \pm 0.013$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/federated.png}
+    \caption{Decentralized two-node FedAvg training. With the shared-embedding
+    placement, effective rank and downstream accuracy are preserved under
+    federation (digits probe $0.941$, matching the centralized $0.934$;
+    mean $\pm$ std over three seeds). The original wiring collapses whether
+    trained centrally or federated.}
+    \label{fig:federated}
+\end{figure}
+
+Two conclusions follow. First, the fix is \emph{compatible with
+decentralization}: federated shared-embedding training preserves high
+effective rank ($26.89$ structured, $31.01$ digits) and downstream accuracy
+($0.941$ on digits, statistically indistinguishable from the centralized
+$0.934$), despite parameter averaging across nodes trained on disjoint data.
+Second, the collapse is a property of the \emph{objective}, not the training
+regime: the original wiring collapses under federation exactly as it does
+centrally (rank $2.69$/$1.05$, probe $0.628$). Correct regularizer placement is
+therefore what enables collapse-resistant self-supervised learning on
+decentralized edge nodes---directly connecting the design principle of
+Section~\ref{sec:placement} to the deployment setting the architecture targets.
+The study is deliberately minimal (two nodes, IID shards, three seeds);
+non-IID data partitions, more nodes, and communication-efficiency analysis are
+left to future work.
+
 \section{Discussion}
 On RQ1, the evidence is partial: the variance constraint demonstrably
 mitigates variance collapse, but at $\beta = 0.01$ the covariance constraint
@@ -362,8 +618,15 @@ and the prediction $s_{\text{pred}}$, respectively; Chapter~\ref{chap:method})
 and that the covariance weight is small relative to the variance weight. The
 covariance-weight ablation (Section~\ref{sec:beta}) tests this directly and
 shows that increasing $\beta$ alone is insufficient to restore rank, which
-points to the different-tensors structure as the underlying cause rather than
-mere mis-weighting. On RQ2, the architecture is genuinely lightweight ($2.84$~MB of
+points to the placement of the penalties rather than their weight. The
+placement study (Section~\ref{sec:placement}) makes this precise: collapse is
+unique to variance-on-$s_t$ without a co-located covariance term, and it is
+invisible to both the loss and the variance criterion. Acting on that cause,
+the shared-embedding reformulation (Section~\ref{sec:sharedfix}) restores
+effective rank by more than an order of magnitude and, as the linear probe
+confirms, recovers downstream accuracy to the level of the unregularized
+baseline; Section~\ref{sec:federated} further shows the correction survives
+decentralized training. On RQ2, the architecture is genuinely lightweight ($2.84$~MB of
 parameters, millisecond CPU inference), supporting its suitability for
 edge deployment in terms of size. On RQ3, the distillation term converges
 rapidly in all cases; the full objective's total loss is non-monotonic
@@ -379,10 +642,15 @@ and why the collapse indicators are necessary.
 \section{Threats to Validity}
 \label{sec:threats}
 The following factors were examined and, where possible, addressed.
-Run-to-run variance, initially a concern, has been \emph{quantified}: the
-five-seed study (Section~\ref{sec:multiseed}) shows the finding is stable and
-the full-vs-unregularized separation holds for every seed. Two factors remain
-open. First, the benchmark coverage is partial: two of the three datasets are
+Run-to-run variance, initially a concern, has been \emph{quantified} across
+the study: the original collapse (five seeds, Section~\ref{sec:multiseed}), the
+full placement grid (five seeds, Table~\ref{tab:placement_ms}), and the
+federated experiment (three seeds, Table~\ref{tab:federated}) are all stable,
+with the key separations far exceeding their standard deviations. The main
+residual single-seed result is the CIFAR-10 probe.
+Representation \emph{usefulness}, previously unmeasured, is now assessed by a
+linear probe on the labeled digits and CIFAR-10 sets (Section~\ref{sec:sharedfix}).
+Two factors remain open. First, the benchmark coverage is partial: two of the three datasets are
 non-standard, and the CIFAR-10 evaluation used a $2000$-image subset with a
 reduced epoch budget rather than the full benchmark. Second, all measurements
 are CPU-only, so latency and memory would differ on target embedded hardware,

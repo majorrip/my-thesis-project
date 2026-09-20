@@ -1,0 +1,109 @@
+{
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "results": {
+    "structured": {
+      "centralized-shared": {
+        "effective_rank": {
+          "mean": 44.164,
+          "std": 1.224,
+          "values": [
+            44.368,
+            42.574,
+            45.551
+          ]
+        },
+        "probe_accuracy": null
+      },
+      "federated-shared": {
+        "effective_rank": {
+          "mean": 26.89,
+          "std": 0.738,
+          "values": [
+            27.716,
+            25.924,
+            27.029
+          ]
+        },
+        "probe_accuracy": null
+      },
+      "federated-original": {
+        "effective_rank": {
+          "mean": 2.695,
+          "std": 0.044,
+          "values": [
+            2.663,
+            2.666,
+            2.757
+          ]
+        },
+        "probe_accuracy": null
+      }
+    },
+    "digits": {
+      "centralized-shared": {
+        "effective_rank": {
+          "mean": 34.287,
+          "std": 0.174,
+          "values": [
+            34.06,
+            34.484,
+            34.316
+          ]
+        },
+        "probe_accuracy": {
+          "mean": 0.934,
+          "std": 0.006,
+          "values": [
+            0.926,
+            0.939,
+            0.937
+          ]
+        }
+      },
+      "federated-shared": {
+        "effective_rank": {
+          "mean": 31.011,
+          "std": 0.085,
+          "values": [
+            31.123,
+            30.919,
+            30.991
+          ]
+        },
+        "probe_accuracy": {
+          "mean": 0.941,
+          "std": 0.006,
+          "values": [
+            0.946,
+            0.933,
+            0.944
+          ]
+        }
+      },
+      "federated-original": {
+        "effective_rank": {
+          "mean": 1.048,
+          "std": 0.029,
+          "values": [
+            1.035,
+            1.088,
+            1.021
+          ]
+        },
+        "probe_accuracy": {
+          "mean": 0.628,
+          "std": 0.013,
+          "values": [
+            0.646,
+            0.617,
+            0.62
+          ]
+        }
+      }
+    }
+  }
+}

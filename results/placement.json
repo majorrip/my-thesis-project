@@ -1,0 +1,74 @@
+{
+  "alpha": 1.0,
+  "beta": 1.0,
+  "results": {
+    "structured": {
+      "var s_t, cov s_pred (original)": {
+        "var_on": "context",
+        "cov_on": "pred",
+        "sigma_bar": 1.5525,
+        "effective_rank": 1.978,
+        "final_var_loss": 0.0,
+        "probe_accuracy": null
+      },
+      "var s_t, cov s_t (shared)": {
+        "var_on": "context",
+        "cov_on": "context",
+        "sigma_bar": 0.3109,
+        "effective_rank": 47.442,
+        "final_var_loss": 0.6907,
+        "probe_accuracy": null
+      },
+      "var s_pred, cov s_pred": {
+        "var_on": "pred",
+        "cov_on": "pred",
+        "sigma_bar": 0.4199,
+        "effective_rank": 7.588,
+        "final_var_loss": 0.7434,
+        "probe_accuracy": null
+      },
+      "var s_pred, cov s_t (swapped)": {
+        "var_on": "pred",
+        "cov_on": "context",
+        "sigma_bar": 0.0853,
+        "effective_rank": 11.731,
+        "final_var_loss": 0.3857,
+        "probe_accuracy": null
+      }
+    },
+    "digits": {
+      "var s_t, cov s_pred (original)": {
+        "var_on": "context",
+        "cov_on": "pred",
+        "sigma_bar": 1.3654,
+        "effective_rank": 1.018,
+        "final_var_loss": 0.0,
+        "probe_accuracy": 0.637
+      },
+      "var s_t, cov s_t (shared)": {
+        "var_on": "context",
+        "cov_on": "context",
+        "sigma_bar": 0.2918,
+        "effective_rank": 34.151,
+        "final_var_loss": 0.7111,
+        "probe_accuracy": 0.937
+      },
+      "var s_pred, cov s_pred": {
+        "var_on": "pred",
+        "cov_on": "pred",
+        "sigma_bar": 0.3464,
+        "effective_rank": 9.616,
+        "final_var_loss": 0.7485,
+        "probe_accuracy": 0.9204
+      },
+      "var s_pred, cov s_t (swapped)": {
+        "var_on": "pred",
+        "cov_on": "context",
+        "sigma_bar": 0.0566,
+        "effective_rank": 4.71,
+        "final_var_loss": 0.4791,
+        "probe_accuracy": 0.9333
+      }
+    }
+  }
+}

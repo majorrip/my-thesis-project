@@ -68,6 +68,24 @@ The contributions of this thesis are:
     hardware (Chapter~\ref{chap:results}).
 \end{itemize}
 
+\section{Scope and Delimitations}
+The wider vision that motivates this project---decentralized, multi-agent
+operation and hallucination mitigation at the edge---is broader than what a
+single thesis can deliver. To be precise about scope, that vision is treated
+as \emph{motivation}, and the work here is deliberately narrower. Specifically: (i) the ``multi-agent'' aspect is
+studied as a minimal two-node federated (FedAvg) experiment
+(Section~\ref{sec:federated}) rather than a full multi-agent system with many
+heterogeneous, asynchronously communicating agents. (ii) ``Hallucination mitigation'' motivates the use of a
+non-generative, collapse-regularized representation, but no generative or
+downstream hallucination benchmark is evaluated; the study measures
+representation-level properties (collapse indicators and a linear probe).
+(iii) ``Decentralized / on-device'' execution motivates the lightweight
+design, but all measurements are taken on commodity CPUs rather than on
+deployed edge hardware. What the thesis contributes and evaluates is the
+single-node, variance--covariance-regularized joint-embedding core and an
+empirical characterization of its behavior. The broader claims are revisited
+as future work in Chapter~\ref{chap:conclusion}.
+
 \section{Thesis Organization}
 Chapter~\ref{chap:lit} surveys related work in self-supervised
 representation learning, joint-embedding architectures, and edge/Dew

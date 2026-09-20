@@ -1,0 +1,36 @@
+{
+  "structured": {
+    "centralized-shared": {
+      "effective_rank": 44.368,
+      "sigma_bar": 0.308,
+      "probe_accuracy": null
+    },
+    "federated-shared": {
+      "effective_rank": 27.716,
+      "sigma_bar": 0.2717,
+      "probe_accuracy": null
+    },
+    "federated-original": {
+      "effective_rank": 2.663,
+      "sigma_bar": 1.3255,
+      "probe_accuracy": null
+    }
+  },
+  "digits": {
+    "centralized-shared": {
+      "effective_rank": 34.06,
+      "sigma_bar": 0.2902,
+      "probe_accuracy": 0.9259
+    },
+    "federated-shared": {
+      "effective_rank": 31.123,
+      "sigma_bar": 0.2898,
+      "probe_accuracy": 0.9463
+    },
+    "federated-original": {
+      "effective_rank": 1.035,
+      "sigma_bar": 1.0729,
+      "probe_accuracy": 0.6463
+    }
+  }
+}
