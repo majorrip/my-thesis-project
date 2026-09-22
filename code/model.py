@@ -58,14 +58,14 @@ def compute_stable_local_loss(projected_student, teacher_target, layer_output,
         }
     return total
 
-class VisionJEPA(nn.Module):
-    def __init__(self, img_channels=3, latent_dim=256, ema_decay=0.999):
-        super().__init__()
-        self.latent_dim = latent_dim
-        self.ema_decay = ema_decay
-
-        # Context Encoder (f_theta)
-        self.context_encoder = nn.Sequential(
+def _build_encoder(backbone, img_channels, latent_dim):
+    """Build the context/target encoder. ``backbone='cnn'`` is the original
+    lightweight 3-block CNN (default, so prior results are unchanged);
+    ``backbone='resnet18'`` uses a randomly-initialized torchvision ResNet-18
+    with its classifier head replaced by a linear projection to ``latent_dim``,
+    for the larger-scale study."""
+    if backbone == "cnn":
+        return nn.Sequential(
             nn.Conv2d(img_channels, 32, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(32),
             nn.ReLU(),
@@ -74,8 +74,27 @@ class VisionJEPA(nn.Module):
             nn.ReLU(),
             nn.Conv2d(64, latent_dim, kernel_size=3, stride=2, padding=1),
             nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Flatten()
+            nn.Flatten(),
         )
+    if backbone == "resnet18":
+        import torchvision
+        net = torchvision.models.resnet18(weights=None)  # random init, no download
+        if img_channels != 3:
+            net.conv1 = nn.Conv2d(img_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        net.fc = nn.Linear(512, latent_dim)  # 512 = ResNet-18 penultimate width
+        return net
+    raise ValueError(f"Unknown backbone: {backbone!r}")
+
+
+class VisionJEPA(nn.Module):
+    def __init__(self, img_channels=3, latent_dim=256, ema_decay=0.999, backbone="cnn"):
+        super().__init__()
+        self.latent_dim = latent_dim
+        self.ema_decay = ema_decay
+        self.backbone = backbone
+
+        # Context Encoder (f_theta)
+        self.context_encoder = _build_encoder(backbone, img_channels, latent_dim)
 
         # Target Encoder (f_theta_bar) - Updated via EMA
         self.target_encoder = copy.deepcopy(self.context_encoder)

@@ -39,11 +39,15 @@ criterion. The implied correction---co-locating both penalties on the context
 embedding---restores effective rank by more than an order of magnitude on all
 three datasets and recovers linear-probe accuracy to the unregularized level
 (digits $0.56\!\rightarrow\!0.94$; CIFAR-10 $0.31\!\rightarrow\!0.41$).
-Finally, in a two-node federated (FedAvg) setting the correction's collapse
-resistance transfers---downstream accuracy $0.946$, matching the centralized
-$0.926$---whereas the flawed placement collapses in both regimes, indicating
-that correct regularizer placement is what enables collapse-resistant
-self-supervised learning on decentralized nodes. The architecture itself is
-compact ($\sim\!0.75$M parameters, $2.84$~MB) with millisecond CPU inference.
-Full-scale benchmarking, on-device measurement, and non-IID / large-scale
-federation are identified as future work.
+In a federated (FedAvg) setting the correction's collapse resistance
+transfers, and it holds under non-IID label skew with up to ten clients,
+whereas the flawed placement collapses in every regime. Critically, however, a
+larger-scale study (ResNet-18 on full CIFAR-10) shows the extreme collapse to
+be largely a small-model artifact and---more consequentially---that effective
+rank ceases to predict downstream accuracy at scale: the highest-rank
+configuration is the \emph{least} useful, and no regularizer beats an
+unregularized baseline. The rank--usefulness correspondence, and the practical
+benefit of the reformulation, are therefore \emph{scale-dependent}. The
+architecture itself is compact ($\sim\!0.75$M parameters, $2.84$~MB);
+characterizing the scale behavior with longer, multi-seed training, along with
+on-device measurement, is the primary item of future work.

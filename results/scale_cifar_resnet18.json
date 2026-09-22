@@ -1,0 +1,10 @@
+{
+  "backbone": "resnet18", "dataset": "cifar10_full", "epochs": 20, "seeds": [0], "note": "Google Colab Pro (L4). Single seed. SSL undertrained (~0.44 absolute probe).",
+  "results": {
+    "unregularized":                 {"effective_rank": 29.49, "probe_accuracy": 0.438},
+    "original (var s_t, cov s_pred)": {"effective_rank": 9.90,  "probe_accuracy": 0.421},
+    "shared (var s_t, cov s_t)":      {"effective_rank": 229.19,"probe_accuracy": 0.358},
+    "both s_pred":                    {"effective_rank": 44.42, "probe_accuracy": 0.441},
+    "swapped (var s_pred, cov s_t)":  {"effective_rank": 49.18, "probe_accuracy": 0.397}
+  }
+}

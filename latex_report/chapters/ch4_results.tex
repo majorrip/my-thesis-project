@@ -603,9 +603,124 @@ centrally (rank $2.69$/$1.05$, probe $0.628$). Correct regularizer placement is
 therefore what enables collapse-resistant self-supervised learning on
 decentralized edge nodes---directly connecting the design principle of
 Section~\ref{sec:placement} to the deployment setting the architecture targets.
-The study is deliberately minimal (two nodes, IID shards, three seeds);
-non-IID data partitions, more nodes, and communication-efficiency analysis are
-left to future work.
+We further stress the decentralized setting with more clients and
+\emph{non-IID} data. Using Dirichlet($\alpha$) label-skewed partitions (smaller
+$\alpha$ = stronger skew) with size-weighted FedAvg, Table~\ref{tab:noniid} and
+Figure~\ref{fig:noniid} report the shared and original placements across
+$5$--$10$ clients. The shared placement remains collapse-resistant
+throughout---effective rank $22$--$27$ and probe accuracy $0.93$--$0.95$---even
+at $10$ clients with strong label skew ($\alpha = 0.1$), while the original
+wiring collapses to rank $1.01$ and probe $\approx 0.66$ in every setting.
+Correct placement is thus robust to the data heterogeneity that characterizes
+realistic federated deployment. Communication-efficiency trade-offs and
+heterogeneous or asynchronous clients remain for future work.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Non-IID federated training with Dirichlet label-skewed shards
+    (single seed). The shared placement resists collapse across client counts
+    and skew levels; the original wiring collapses regardless.}
+    \label{tab:noniid}
+    \begin{tabular}{llcc}
+        \toprule
+        \textbf{Setting} & \textbf{Placement} & \textbf{Eff.\ rank} & \textbf{Probe} \\
+        \midrule
+        \multirow{2}{*}{5 clients, near-IID}
+          & Shared   & $25.74$ & $0.950$ \\
+          & Original & $\mathbf{1.01}$ & $0.661$ \\
+        \midrule
+        \multirow{2}{*}{5 clients, moderate non-IID}
+          & Shared   & $27.27$ & $0.931$ \\
+          & Original & $\mathbf{1.01}$ & $0.650$ \\
+        \midrule
+        \multirow{2}{*}{10 clients, strong non-IID}
+          & Shared   & $21.98$ & $0.941$ \\
+          & Original & $\mathbf{1.01}$ & $0.663$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/federated_noniid.png}
+    \caption{Non-IID federated training (Dirichlet shards). The shared
+    placement preserves effective rank and downstream accuracy as the number of
+    clients and the label skew increase; the original wiring collapses in every
+    setting.}
+    \label{fig:noniid}
+\end{figure}
+
+\subsection{Scaling Up: ResNet-18 on Full CIFAR-10}
+\label{sec:scale}
+The experiments so far use the lightweight CNN. To test whether the findings
+hold with a standard backbone at benchmark scale, we replace the encoder with a
+\textbf{ResNet-18} and train on all $50{,}000$ CIFAR-10 training images,
+evaluating each placement with a linear probe on the $10{,}000$-image test set
+(single seed, $20$ epochs). Table~\ref{tab:scale} and Figure~\ref{fig:scale}
+report the outcome, and it \emph{revises} the small-scale picture in two
+important ways.
+
+\begin{table}[htbp]
+    \centering
+    \caption{ResNet-18 on full CIFAR-10 (single seed, $20$ epochs). At this
+    scale, effective rank no longer predicts downstream accuracy: the
+    highest-rank configuration (shared) is the least useful, and no regularized
+    setting beats the unregularized baseline.}
+    \label{tab:scale}
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{Configuration} & \textbf{Eff.\ rank} & \textbf{Probe acc.} \\
+        \midrule
+        Unregularized                        & $29.5$  & $\mathbf{0.438}$ \\
+        Original (var $s_t$, cov $s_{\text{pred}}$) & $9.9$ & $0.421$ \\
+        Shared (var $s_t$, cov $s_t$)        & $\mathbf{229.2}$ & $0.358$ \\
+        Both $s_{\text{pred}}$               & $44.4$  & $\mathbf{0.441}$ \\
+        Swapped (var $s_{\text{pred}}$, cov $s_t$) & $49.2$ & $0.397$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/scale_cifar.png}
+    \caption{ResNet-18 on full CIFAR-10. The shared placement produces by far
+    the highest effective rank ($229$) but the \emph{lowest} downstream
+    accuracy, and no regularized configuration beats the unregularized
+    baseline. The rank--usefulness correspondence seen at small scale does not
+    hold here.}
+    \label{fig:scale}
+\end{figure}
+
+First, the collapse is far milder with a high-capacity backbone. The original
+wiring reaches effective rank $9.9$ rather than the $\approx 1$ seen with the
+CNN; the catastrophic rank-1 collapse is therefore, in large part, a property
+of the \emph{small model} rather than of the objective alone. The placement
+still orders the configurations---the original wiring is the lowest-rank
+regularized setting and the shared variant the highest ($229$ of $256$)---so
+the mechanism persists, but its severity does not transfer.
+
+Second, and more consequentially, \emph{effective rank ceases to predict
+downstream usefulness at this scale}. The shared placement attains by far the
+highest rank yet the \emph{lowest} probe accuracy ($0.358$), and no regularized
+configuration exceeds the unregularized baseline ($0.438$); the best downstream
+accuracy comes from the unregularized and both-$s_{\text{pred}}$ settings
+($\approx 0.44$). The correspondence between effective rank and linear-probe
+accuracy observed on the small datasets (Section~\ref{sec:placement}) thus does
+\emph{not} generalize to a ResNet-18 on natural images: maximizing rank via the
+shared reformulation does not improve---and slightly harms---the learned
+representation's usefulness.
+
+These results are reported plainly because they qualify the thesis's central
+claims rather than confirm them. The placement effect on \emph{rank} is real
+and reproduces across scales, but (i) its extreme form is a small-model
+artifact, and (ii) the link from rank to downstream quality---and hence the
+practical value of the shared reformulation---is scale-dependent and does not
+hold at ResNet/CIFAR scale. Two caveats temper even this negative result: the
+run is single-seed, and the self-supervised training is short ($20$ epochs,
+absolute probe accuracy $\approx 0.44$), so the representations are weak in
+absolute terms. A longer, multi-seed study is needed to characterize the scale
+behavior fully; nonetheless the direction is clear enough to caution against
+treating effective rank as a proxy for representation quality at scale.
 
 \section{Discussion}
 On RQ1, the evidence is partial: the variance constraint demonstrably
@@ -626,7 +741,12 @@ the shared-embedding reformulation (Section~\ref{sec:sharedfix}) restores
 effective rank by more than an order of magnitude and, as the linear probe
 confirms, recovers downstream accuracy to the level of the unregularized
 baseline; Section~\ref{sec:federated} further shows the correction survives
-decentralized training. On RQ2, the architecture is genuinely lightweight ($2.84$~MB of
+decentralized training. A crucial qualification follows from the scaling study
+(Section~\ref{sec:scale}): the alignment between effective rank and downstream
+usefulness that underpins this diagnosis holds at small scale but \emph{breaks}
+for a ResNet-18 on CIFAR-10, where the highest-rank configuration is the least
+useful and no regularizer beats the unregularized baseline. The placement
+effect on rank persists across scales; its practical benefit does not. On RQ2, the architecture is genuinely lightweight ($2.84$~MB of
 parameters, millisecond CPU inference), supporting its suitability for
 edge deployment in terms of size. On RQ3, the distillation term converges
 rapidly in all cases; the full objective's total loss is non-monotonic
@@ -650,10 +770,13 @@ with the key separations far exceeding their standard deviations. The main
 residual single-seed result is the CIFAR-10 probe.
 Representation \emph{usefulness}, previously unmeasured, is now assessed by a
 linear probe on the labeled digits and CIFAR-10 sets (Section~\ref{sec:sharedfix}).
-Two factors remain open. First, the benchmark coverage is partial: two of the three datasets are
-non-standard, and the CIFAR-10 evaluation used a $2000$-image subset with a
-reduced epoch budget rather than the full benchmark. Second, all measurements
-are CPU-only, so latency and memory would differ on target embedded hardware,
-and the encoder is small relative to the transformer backbones typical of the
-JEPA literature. Addressing these is the subject of
+Three factors remain open. First, scale: the study spans a lightweight CNN and
+a ResNet-18 on full CIFAR-10 (Section~\ref{sec:scale}), but the ResNet run is
+single-seed and short ($20$ epochs), and---most importantly---it shows that the
+practical benefit of the reformulation does not survive at that scale, so the
+scale behavior is not yet settled and requires longer, multi-seed training.
+Second, evaluation depth: representation usefulness is measured only by a linear
+probe; a stronger downstream protocol may read the scaled representations
+differently. Third, all measurements are CPU-only, so latency and memory would
+differ on target embedded hardware. Addressing these is the subject of
 Chapter~\ref{chap:conclusion}.

@@ -1,0 +1,8 @@
+{
+  "dataset": "digits", "backbone": "cnn", "rounds": 6, "local_epochs": 3, "note": "Dirichlet label-skewed shards, size-weighted FedAvg.",
+  "settings": {
+    "5 clients, near-IID (alpha=100)":       {"shared": {"effective_rank": 25.74, "probe": 0.950}, "original": {"effective_rank": 1.01, "probe": 0.661}},
+    "5 clients, moderate non-IID (alpha=0.5)":{"shared": {"effective_rank": 27.27, "probe": 0.931}, "original": {"effective_rank": 1.01, "probe": 0.650}},
+    "10 clients, strong non-IID (alpha=0.1)": {"shared": {"effective_rank": 21.98, "probe": 0.941}, "original": {"effective_rank": 1.01, "probe": 0.663}}
+  }
+}

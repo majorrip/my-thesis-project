@@ -1,0 +1,109 @@
+\chapter{A Linear-Model Analysis of Placement-Induced Collapse}
+\label{app:theory}
+
+\emph{This appendix is a draft analysis to be verified and adapted. It gives a
+first-principles explanation, in a linearized model, of why applying the
+variance penalty to the context embedding $s_t$ without a co-located
+covariance penalty on $s_t$ induces rank collapse---and why that collapse is
+invisible to both the training loss and the variance criterion. The argument
+reproduces the three empirical signatures reported in
+Section~\ref{sec:placement}: a final variance loss of $0$, the largest
+$\bar\sigma$, and effective rank $\approx 1$.}
+
+\section{Setup}
+Approximate the context encoder and the predictor by linear maps. Let the
+input be $x \in \mathbb{R}^{m}$ with $x \sim \mathcal{N}(0, I_m)$, the context
+embedding be
+\begin{equation}
+    s_t = W x, \qquad W \in \mathbb{R}^{d \times m},
+\end{equation}
+and the predictor be a trainable linear map $s_{\text{pred}} = P\,s_t$ with
+$P \in \mathbb{R}^{d \times d}$ (absorbing the action conditioning into $P$ for
+this analysis). Write the context-embedding covariance as
+\begin{equation}
+    \Sigma \;=\; \operatorname{Cov}(s_t) \;=\; W W^{\top} \in \mathbb{R}^{d \times d}.
+\end{equation}
+The two VICReg-style penalties are, for a chosen tensor $u$ with covariance
+$\Sigma_u$,
+\begin{align}
+    \mathcal{L}_{\text{var}}(u) &= \frac{1}{d}\sum_{j=1}^{d}
+        \max\!\big(0,\; \gamma - \sqrt{(\Sigma_u)_{jj}}\big), \\
+    \mathcal{L}_{\text{cov}}(u) &= \frac{1}{d}\sum_{i \neq j} (\Sigma_u)_{ij}^{2}.
+\end{align}
+The variance penalty constrains only the \emph{diagonal} of $\Sigma_u$; the
+covariance penalty constrains only the \emph{off-diagonal}.
+
+\section{Original wiring: variance on $s_t$, covariance on $s_{\text{pred}}$}
+The objective is
+$\mathcal{L} = \mathcal{L}_{\text{distill}}
++ \alpha\,\mathcal{L}_{\text{var}}(s_t) + \beta\,\mathcal{L}_{\text{cov}}(s_{\text{pred}})$.
+
+\paragraph{The covariance term imposes no constraint on the rank of $\Sigma$.}
+The covariance of the prediction is $\Sigma_{\text{pred}} = P \Sigma P^{\top}$.
+For \emph{any} $\Sigma$ with eigendecomposition $\Sigma = U \Lambda U^{\top}$,
+choosing $P = D U^{\top}$ for any diagonal $D$ gives
+$\Sigma_{\text{pred}} = D \Lambda D$, which is diagonal, so
+$\mathcal{L}_{\text{cov}}(s_{\text{pred}}) = 0$. The predictor can therefore
+\emph{absorb} the decorrelation for any context covariance, including a
+rank-deficient one. Consequently $\beta\,\mathcal{L}_{\text{cov}}(s_{\text{pred}})$
+places no constraint on $\operatorname{rank}(\Sigma)$.
+
+\paragraph{The variance term admits rank-1 solutions.}
+The only remaining constraint on $s_t$ is
+$\mathcal{L}_{\text{var}}(s_t) = 0 \iff \Sigma_{jj} \ge \gamma^{2}\ \forall j$.
+Consider a rank-1 covariance $\Sigma = v v^{\top}$ with
+$v \in \mathbb{R}^{d}$ and $|v_j| \ge \gamma$ for all $j$. Then
+$\Sigma_{jj} = v_j^{2} \ge \gamma^{2}$, so $\mathcal{L}_{\text{var}}(s_t) = 0$
+and the per-dimension standard deviation is $\sqrt{\Sigma_{jj}} = |v_j| \ge \gamma$,
+giving $\bar\sigma \ge \gamma$. Its effective rank is exactly $1$.
+
+\paragraph{Conclusion.}
+A rank-1 context representation with inflated per-dimension scale is a global
+optimum of the original-wiring objective: it drives $\mathcal{L}_{\text{var}}$
+and $\mathcal{L}_{\text{cov}}$ to zero and (with a suitable predictor) matches
+the distillation target. At this optimum the variance loss is exactly $0$, the
+mean standard deviation $\bar\sigma$ is large, and the effective rank is $1$---%
+precisely the empirical signature of Table~\ref{tab:placement} (final
+variance loss $0.000$, largest $\bar\sigma$, rank $\approx 1$). Because both
+the loss and the variance criterion are satisfied, the collapse is invisible
+to them.
+
+\section{Shared placement: both penalties on $s_t$}
+Now the objective includes $\beta\,\mathcal{L}_{\text{cov}}(s_t)
+= \tfrac{\beta}{d}\sum_{i\neq j}\Sigma_{ij}^{2}$, acting on the same covariance
+$\Sigma$ that the variance term constrains. A rank-1 $\Sigma = v v^{\top}$ now
+incurs an off-diagonal penalty
+\begin{equation}
+    \sum_{i \neq j} (v_i v_j)^{2}
+    = \Big(\sum_j v_j^{2}\Big)^{2} - \sum_j v_j^{4},
+\end{equation}
+which is large whenever the diagonal constraint $|v_j| \ge \gamma$ holds.
+Collapse is therefore no longer optimal. The joint stationary condition drives
+the off-diagonals of $\Sigma$ toward $0$ while the diagonals are held at
+$\gamma^{2}$, i.e.\ $\Sigma \to \gamma^{2} I_d$, which is full rank $d$. This
+is the standard VICReg fixed point, and it explains why co-locating the
+covariance term on $s_t$ restores effective rank (Table~\ref{tab:placement},
+shared cells).
+
+\section{Why co-location is necessary}
+The asymmetry is structural. The variance penalty is a per-coordinate
+(diagonal) constraint and is blind to inter-dimensional correlation. Rank
+deficiency is an off-diagonal (correlation) property. Preventing it therefore
+requires imposing the decorrelation penalty on the \emph{same} representation
+whose rank is at stake. Routing that penalty through the trainable predictor
+($s_{\text{pred}} = P s_t$) lets $P$ satisfy it for any $\Sigma$, decoupling it
+from the rank of $s_t$. Hence a variance penalty without a co-located
+covariance penalty inflates the diagonal while leaving the rank unconstrained,
+and the collapsed optimum is invisible to the objective---exactly the
+phenomenon characterized empirically in this thesis.
+
+\section{Limitations of the analysis}
+The argument treats the encoder and predictor as linear and the input as
+isotropic Gaussian; it characterizes the optimality of collapsed
+\emph{fixed points} rather than proving that gradient descent converges to
+them, and it abstracts away batch normalization, the ReLU nonlinearity, and the
+EMA target dynamics. A full nonlinear treatment, and a convergence (rather than
+optimality) analysis, are left as future work. Nonetheless, the linear model
+already predicts the three measured signatures of the collapse and the
+effect of co-locating the penalties, which is the intended purpose of this
+appendix.

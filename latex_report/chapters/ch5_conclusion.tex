@@ -23,10 +23,15 @@ memory footprint; (iv) a systematic regularizer-placement study yielding a
 design principle---applying a variance penalty to an embedding without a
 co-located covariance penalty on the same embedding induces rank collapse
 that is worse than no regularization and invisible to both the training loss
-and the variance criterion---validated by a linear probe; and (v) a
+and the variance criterion---validated by a linear probe; (v) a
 demonstration that the corrected placement's collapse resistance transfers to
-decentralized two-node federated (FedAvg) training, whereas the flawed
-placement collapses in both centralized and federated regimes.
+decentralized federated (FedAvg) training, including under non-IID label skew
+with up to ten clients, whereas the flawed placement collapses in every regime;
+and (vi) a scaling study (ResNet-18 on full CIFAR-10) establishing that the
+placement effect on rank persists but is far milder with a high-capacity
+backbone, and that the effective-rank/usefulness correspondence---and hence the
+practical benefit of the reformulation---is \emph{scale-dependent} and does not
+hold at ResNet/CIFAR scale.
 
 \section{Limitations}
 The principal limitation of the present work is that empirical validation
@@ -42,40 +47,44 @@ unregularized baseline was in fact higher-rank---a pattern that held on the
 CIFAR-10 natural images as well as the smaller datasets. A covariance-weight
 ablation (Section~\ref{sec:beta}) established that this is not resolved by
 increasing $\beta$ alone, and a shared-embedding reformulation
-(Section~\ref{sec:sharedfix}) then corrected it---restoring effective rank by
-more than an order of magnitude on all three datasets and recovering
-linear-probe accuracy (on digits and CIFAR-10) to the unregularized baseline.
-The correction removes a harmful failure mode rather than beating
-no-regularization. The placement effect and the correction are stable across
-five seeds (structured, digits) and three seeds under federation; the residual
-single-seed result is the CIFAR-10 probe. The correction has not been jointly
-tuned in $\alpha$ and $\beta$ under the new formulation; confirming it at
-scale, and demonstrating a net gain over no regularization, is outstanding. In addition, the
-convolutional encoder used in the proof-of-concept is small relative to the
-transformer backbones typical of the JEPA literature, so conclusions drawn
-here may not transfer directly to larger models. The ``multi-agent'' aspect
-suggested by the title is, at present, realized only as the multi-module
-(context/target/predictor) structure of a single node; coordination across
-multiple physical agents is not yet implemented.
+(Section~\ref{sec:sharedfix}) then corrected it \emph{at small scale}%
+---restoring effective rank by more than an order of magnitude and recovering
+linear-probe accuracy to the unregularized baseline on the lightweight CNN.
+Two honest qualifications bound this result. First, even at small scale the
+correction removes a harmful failure mode rather than beating no-regularization.
+Second, and more importantly, a larger-scale study (ResNet-18 on full CIFAR-10;
+Section~\ref{sec:scale}) shows that the extreme collapse is largely a
+\emph{small-model artifact}, and that effective rank no longer predicts
+downstream usefulness at that scale---the shared reformulation yields the
+highest rank yet the lowest probe accuracy, and no regularizer beats the
+unregularized baseline. The placement effect on rank is robust (reproduced
+across five seeds and two environments and, in weakened form, at ResNet scale),
+but its \emph{practical benefit is scale-dependent} and absent at ResNet/CIFAR
+scale. The scaling run is itself single-seed and short ($20$ epochs), so a
+longer, multi-seed study is required to settle the scale behavior. The
+``multi-agent'' aspect is realized as federated averaging across up to ten
+non-IID clients, not as heterogeneous, asynchronously communicating agents.
 
 \section{Future Work}
 Several directions follow directly:
 \begin{itemize}
-    \item \textbf{Consolidating the shared-embedding fix.} The
-    shared-embedding reformulation (Section~\ref{sec:sharedfix}) already
-    restores effective rank and downstream accuracy. The remaining work is to
-    jointly tune $\alpha$ and $\beta$ under it (the fix lowers $\bar\sigma$ as
-    a side effect), validate it across multiple seeds, and extend the
-    linear-probe evaluation to CIFAR-10 and larger backbones.
-    \item \textbf{Full-scale and on-device evaluation.} Run the existing
-    protocol on the complete CIFAR-10 benchmark (and larger datasets) and on
-    a defined edge device, to replace the subset results and CPU-only
-    measurements with full-scale and hardware-accurate figures.
-    \item \textbf{Backbone scaling.} Evaluate whether the local objective
-    remains stable with larger or transformer-based encoders.
-    \item \textbf{Scaling the decentralized setting.} The two-node FedAvg
-    study (Section~\ref{sec:federated}) used IID shards and a single seed.
-    Realistic deployment requires evaluating non-IID partitions, more (and
-    heterogeneous) nodes, asynchronous communication, and
-    communication-efficiency trade-offs \cite{mcmahan2017communication}.
+    \item \textbf{Explaining the scale-dependence.} The most important question
+    raised by this work is why high effective rank fails to yield useful
+    representations at ResNet/CIFAR scale (Section~\ref{sec:scale}) when it
+    tracks usefulness at small scale. Longer, multi-seed training at scale, a
+    stronger self-supervised protocol, and evaluation beyond a linear probe are
+    needed to determine whether the decoupling reflects undertraining or a
+    genuine property of the objective in high-capacity models.
+    \item \textbf{On-device measurement.} All timing and memory figures are
+    CPU-only. Deploying the encoder on a defined edge device would replace them
+    with hardware-accurate latency, memory, and energy measurements.
+    \item \textbf{Heterogeneous and asynchronous federation.} The federated
+    study now covers non-IID label skew and up to ten clients; realistic
+    deployment additionally requires heterogeneous and asynchronously
+    communicating nodes and an analysis of communication-efficiency trade-offs
+    \cite{mcmahan2017communication}.
+    \item \textbf{From analysis to theory.} The linear-model account in
+    Appendix~\ref{app:theory} explains the small-scale collapse; extending it
+    to nonlinear encoders and to a convergence (rather than fixed-point)
+    argument would place the placement principle on a firmer footing.
 \end{itemize}

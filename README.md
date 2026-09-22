@@ -1,10 +1,10 @@
-# EdgeVerify: Preventing Representation Collapse in Self-Supervised Edge Models
+# EdgeVerify: Preventing Representation Collapse in JEPAs for Edge Devices
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 
-> **Thesis Research**
+> **Master's Thesis Research**
 > **Author:** Atif Karim (Student ID: 1000055796)
 > **Department:** Computer Science and Engineering, BRAC University
 > **Supervisor:** Annajiat Alim Rasel
