@@ -65,8 +65,8 @@ longer, multi-seed study is required to settle the scale behavior. The
 ``multi-agent'' aspect is realized as federated averaging across up to ten
 non-IID clients, not as heterogeneous, asynchronously communicating agents.
 
-\section{Future Work}
-Several directions follow directly:
+\section{Immediate Next Steps}
+Several directions follow directly from the experiments reported here:
 \begin{itemize}
     \item \textbf{Explaining the scale-dependence.} The most important question
     raised by this work is why high effective rank fails to yield useful
@@ -77,7 +77,9 @@ Several directions follow directly:
     genuine property of the objective in high-capacity models.
     \item \textbf{On-device measurement.} All timing and memory figures are
     CPU-only. Deploying the encoder on a defined edge device would replace them
-    with hardware-accurate latency, memory, and energy measurements.
+    with hardware-accurate latency, memory, and energy measurements, and would
+    let the memory-bounded local training scheme's peak-memory behavior
+    (Chapter~\ref{chap:method}) be measured rather than analyzed.
     \item \textbf{Heterogeneous and asynchronous federation.} The federated
     study now covers non-IID label skew and up to ten clients; realistic
     deployment additionally requires heterogeneous and asynchronously
@@ -88,3 +90,81 @@ Several directions follow directly:
     to nonlinear encoders and to a convergence (rather than fixed-point)
     argument would place the placement principle on a firmer footing.
 \end{itemize}
+
+\section{A Research Agenda: Toward Decentralized, Low-Powered but Capable
+Action-Conditioned Systems}
+\label{sec:agenda}
+Beyond these immediate follow-ons, the results of this thesis seed a longer
+research programme. The motivating vision, stated in
+Chapter~\ref{chap:intro}, is a system of \emph{decentralized, low-powered but
+capable} devices---commodity, resource-constrained nodes that learn and act
+collaboratively, without a central coordinator, while retaining
+representational quality approaching that of a large centralized model. The
+architecture studied here is a minimal action-conditioned world-model core,
+and its central finding---that representational \emph{capability} can be lost
+silently, governed by \emph{where} the anti-collapse regularizer is applied
+rather than merely whether it is present---is precisely the kind of fragility
+that becomes more acute, and harder to detect, as a system is decentralized
+and its resource budget tightened. Four directions organize the programme;
+each is anchored to a specific result of this thesis.
+
+\subsection{From Federated to Fully Decentralized (Gossip) Learning}
+This thesis demonstrated that the corrected regularizer placement's collapse
+resistance survives \emph{federated} aggregation (Section~\ref{sec:federated}),
+which still relies on a central server to average parameters. The open problem
+is whether capability preservation survives \emph{server-less} operation, where
+nodes exchange updates only with neighbours (gossip-based decentralized
+optimization) and no global model ever exists to anchor the population
+variance and covariance statistics on which the anti-collapse objective
+depends. Variance and covariance are population-level quantities; estimating
+them from a single node's local, non-IID data---or reconstructing them across a
+communication graph without centralizing embeddings---is non-trivial, and a
+poor estimate is exactly the condition under which the placement failure
+identified here re-emerges. The direction is to formulate decentralized
+variance/covariance regularization and characterize the collapse behavior of
+action-conditioned predictors under gossip aggregation.
+
+\subsection{The Interaction of Heterogeneity and Collapse}
+The non-IID study (Section~\ref{sec:federated}) showed that the flawed
+placement collapses in \emph{every} regime while the corrected placement holds
+up to ten label-skewed clients. It did not, however, characterize \emph{how}
+heterogeneity and collapse interact as skew and node count grow, nor how
+\emph{capacity} heterogeneity (nodes with different model sizes or memory
+budgets) affects the outcome. The open questions are whether increasing data
+skew amplifies placement-induced collapse, whether a personalization--collapse
+trade-off exists (per-node adaptation improving local accuracy while degrading
+the shared representation), and how to preserve a capable shared representation
+across nodes that are themselves unequal in capability. This connects the
+capability-preservation result directly to the ``decentralized'' and
+``low-powered'' legs of the motivating vision, where heterogeneity is the norm
+rather than the exception.
+
+\subsection{Communication-Efficient Monitoring of Representational Capability}
+A recurring theme of the results is that collapse is \emph{invisible} to the
+quantities a system would naturally monitor: neither the training loss nor a
+variance criterion revealed it, and only the effective rank of the embedding
+covariance did (Section~\ref{sec:placement}). In a centralized setting this is
+an inconvenience; in a decentralized, low-powered one it is a genuine obstacle,
+because effective rank is a global spectral quantity that cannot be computed
+without gathering embeddings the system is designed \emph{not} to move. The
+open problem is to develop cheap, decentralized health signals for
+representational capability---communication-efficient or local estimators of
+rank/decorrelation that let a node, or a swarm, detect capability loss before
+it propagates through aggregation. This reframes the thesis's diagnostic
+contribution as an online monitoring problem for decentralized systems.
+
+\subsection{From Glimpse-Actions to Sequential Action-Conditioned World Models}
+The action in this thesis is a single spatial glimpse---\emph{which region to
+reveal}---and there is no action sequence, planning, or reward
+(Chapter~\ref{chap:intro}, Scope). The architecture is therefore a world-model
+\emph{core}, not a functioning action model. The natural extension, and the one
+that makes ``capable action models on commodity hardware'' concrete, is to
+condition prediction on \emph{sequences} of actions, to plan in the learned
+latent space, and eventually to close the loop with control. The
+capability-preservation results become load-bearing here: a world model used
+for planning is only as reliable as its latent state is informative, so
+collapse under decentralized, resource-bounded training is not a peripheral
+concern but a prerequisite for trustworthy latent planning. Establishing that
+memory-bounded local training and decentralized aggregation can produce a
+\emph{non-collapsed, plannable} latent world model on commodity hardware is the
+unifying goal toward which the four directions point.

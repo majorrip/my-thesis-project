@@ -10,7 +10,11 @@ bandwidth bottlenecks, latency overheads, and substantial privacy risks
 \cite{shi2016edge}. Edge and Dew computing paradigms respond to these
 pressures by relocating inference---and, increasingly, learning---toward
 the device tier, where computation occurs close to, or directly at, the
-data source \cite{wang2016dew}.
+data source \cite{wang2016dew}. Taken to its conclusion, this trajectory
+points toward \emph{decentralized, low-powered but capable} systems:
+collections of commodity, resource-constrained devices that learn and act
+collaboratively, without a central coordinator, while retaining
+representational quality comparable to a large centralized model.
 
 A parallel shift has occurred in the design of representation-learning
 objectives. Generative and reconstructive models expend significant
@@ -22,33 +26,62 @@ semantically meaningful structure \cite{lecun2022path, assran2023self}.
 This property makes JEPAs an attractive candidate for the edge, where
 compute and memory budgets preclude large generative backbones.
 
+Crucially, the JEPA formulation is not merely an efficient encoder: it was
+proposed as the predictive core of an autonomous agent that models the
+world and plans within it \cite{lecun2022path}. In that framing, the
+architecture learns a latent state from partial observations and predicts
+how that state changes \emph{conditioned on an action}---the minimal
+ingredient of a \emph{world model}. Popular discourse labels systems built
+on this idea ``Large Action Models'' (LAMs); we use the more precise terms
+\emph{action-conditioned predictive model} and \emph{world model}
+throughout, as the popular term carries no settled technical definition.
+The architecture studied here, EdgeVerify, is action-conditioned by
+construction: it predicts the latent representation of an unobserved region
+from visible context and an explicit action encoding (Chapter~\ref{chap:method}).
+It is therefore a minimal instance of the world-model core, and the natural
+question this thesis investigates is what it takes for such a core to remain
+\emph{capable} when pushed toward the decentralized, resource-constrained
+regime described above.
+
 \section{Problem Statement}
-Executing predictive architectures on localized edge devices introduces
-two distinct and coupled challenges:
+Moving an action-conditioned predictive core toward decentralized,
+low-powered operation introduces three coupled challenges:
 \begin{enumerate}
     \item \textbf{Resource Constraints:} Limited memory bandwidth and VRAM
     make end-to-end backpropagation across large backbones infeasible on
     micro-architectures, motivating localized, layer-wise training schemes
     that bound the active computational graph.
-    \item \textbf{Latent Collapse:} Non-generative architectures such as
-    JEPAs can trivially minimize a latent prediction loss by mapping
-    disparate inputs to a constant embedding vector, collapsing
-    representational capacity. Avoiding this failure mode without
-    negative-sample pairing requires explicit regularization
-    \cite{bardes2022vicreg}.
+    \item \textbf{Representation Collapse (Capability Loss):}
+    Non-generative architectures such as JEPAs can trivially minimize a
+    latent prediction loss by mapping disparate inputs to a constant
+    embedding vector, collapsing representational capacity. Because a world
+    model is only useful insofar as its latent state is informative,
+    collapse is not a cosmetic defect but a direct loss of capability, and
+    avoiding it without negative-sample pairing requires explicit
+    regularization \cite{bardes2022vicreg}.
+    \item \textbf{Decentralized Aggregation:} When learning is distributed
+    across heterogeneous, non-IID nodes and their parameters are aggregated,
+    the anti-collapse mechanism must continue to hold under aggregation---a
+    setting where degradation can be silent, since neither the training loss
+    nor a naive variance criterion necessarily reveals it.
 \end{enumerate}
 
 \section{Research Objectives}
 \begin{itemize}
-    \item Design a localized, joint-embedding predictive architecture
-    (EdgeVerify) tailored to edge and Dew computing nodes.
+    \item Design a localized, action-conditioned joint-embedding predictive
+    architecture (EdgeVerify) suitable as a world-model core for edge and
+    Dew computing nodes.
     \item Implement local, layer-wise gradient isolation to enable training
     under strict memory budgets by bounding the backpropagation graph.
     \item Integrate variance and covariance regularization into the
-    distillation objective to prevent dimensional collapse during
-    on-device learning.
+    predictive objective to preserve representational capacity (prevent
+    dimensional collapse) during on-device learning.
+    \item Characterize, rather than assume, \emph{where} the regularizer
+    must be applied for collapse to be avoided, and verify that the
+    resulting behavior holds under decentralized (federated, non-IID)
+    aggregation.
     \item Define a reproducible protocol to evaluate convergence stability,
-    representation collapse, inference latency, and memory footprint
+    representation collapse, downstream usefulness, and memory footprint
     against cloud-reliant and non-regularized baselines.
 \end{itemize}
 
@@ -57,40 +90,69 @@ The contributions of this thesis are:
 \begin{itemize}
     \item An architecture, \textbf{EdgeVerify}, combining an EMA target
     encoder, an action-conditioned latent predictor, and a
-    VICReg-inspired anti-collapse objective for edge deployment
-    (Chapter~\ref{chap:method}).
+    VICReg-inspired anti-collapse objective---a minimal action-conditioned
+    world-model core for edge deployment (Chapter~\ref{chap:method}).
     \item A stable local loss formulation,
     $\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{distill}}
     + \alpha\,\mathcal{L}_{\text{var}} + \beta\,\mathcal{L}_{\text{cov}}$,
     that regularizes representations without negative pairs.
-    \item A proof-of-concept implementation in PyTorch and an evaluation
-    methodology for assessing the framework on resource-constrained
-    hardware (Chapter~\ref{chap:results}).
+    \item A \emph{placement} finding: applying the variance penalty to an
+    embedding without a co-located covariance penalty on the same embedding
+    induces rank collapse that is invisible to both the training loss and
+    the variance criterion---identifying regularizer placement, not merely
+    regularizer presence, as the governing factor for capability
+    preservation (Chapter~\ref{chap:results}).
+    \item Evidence that this behavior transfers to a decentralized
+    (federated, non-IID) setting, and an honest characterization of its
+    scale-dependence (Chapter~\ref{chap:results}).
+    \item A reproducible PyTorch implementation and evaluation methodology
+    for assessing the framework on resource-constrained hardware.
 \end{itemize}
 
 \section{Scope and Delimitations}
-The wider vision that motivates this project---decentralized, multi-agent
-operation and hallucination mitigation at the edge---is broader than what a
-single thesis can deliver. To be precise about scope, that vision is treated
-as \emph{motivation}, and the work here is deliberately narrower. Specifically: (i) the ``multi-agent'' aspect is
-studied as a minimal two-node federated (FedAvg) experiment
-(Section~\ref{sec:federated}) rather than a full multi-agent system with many
-heterogeneous, asynchronously communicating agents. (ii) ``Hallucination mitigation'' motivates the use of a
-non-generative, collapse-regularized representation, but no generative or
-downstream hallucination benchmark is evaluated; the study measures
-representation-level properties (collapse indicators and a linear probe).
-(iii) ``Decentralized / on-device'' execution motivates the lightweight
-design, but all measurements are taken on commodity CPUs rather than on
-deployed edge hardware. What the thesis contributes and evaluates is the
-single-node, variance--covariance-regularized joint-embedding core and an
-empirical characterization of its behavior. The broader claims are revisited
-as future work in Chapter~\ref{chap:conclusion}.
+The wider vision that motivates this project---decentralized, low-powered
+but capable action-conditioned systems---is broader than what a single
+MSc thesis can deliver, and it is treated here as \emph{motivation}, with
+the work itself deliberately narrower. Three delimitations are stated
+explicitly to avoid overclaiming:
+\begin{enumerate}
+    \item \textbf{World model / action model.} EdgeVerify is
+    action-conditioned and is therefore a structural instance of a
+    world-model core. It is not, and is not claimed to be, a functioning
+    ``action model'': the action here is a spatial glimpse (which region to
+    reveal) rather than a control action in an environment, and there is no
+    action \emph{sequence}, planning, or reward. The action-model reading is
+    the trajectory toward which this work points, revisited as future work
+    (Chapter~\ref{chap:conclusion}), not a deliverable of this thesis.
+    \item \textbf{Decentralization.} The decentralized aspect is studied as
+    a federated (FedAvg) experiment, including a non-IID (Dirichlet)
+    partition (Section~\ref{sec:federated}), rather than as a fully
+    decentralized, gossip-based system with many asynchronously
+    communicating peers. The latter is the intended direction, not the
+    present scope.
+    \item \textbf{Low-powered execution.} The lightweight design is
+    motivated by edge constraints. Inference-time efficiency---parameter
+    count, parameter memory, and single-sample latency---is measured on
+    commodity CPU (Section~\ref{sec:efficiency}), and a memory-bounded,
+    layer-wise (local) training scheme is developed to bound the active
+    computational graph. However, the training-time memory savings of the
+    local scheme are not measured on deployed edge hardware, all timing is
+    CPU wall-clock and environment-dependent, and no claim of capability
+    parity with a large centralized model is made.
+\end{enumerate}
+What the thesis contributes and evaluates is the action-conditioned,
+variance--covariance-regularized joint-embedding core, the identification
+of regularizer placement as the governing factor for capability
+preservation, and an empirical characterization of its behavior---including
+under decentralized aggregation. The broader claims are revisited as future
+work in Chapter~\ref{chap:conclusion}.
 
 \section{Thesis Organization}
 Chapter~\ref{chap:lit} surveys related work in self-supervised
-representation learning, joint-embedding architectures, and edge/Dew
-computing. Chapter~\ref{chap:method} details the EdgeVerify architecture,
-loss formulation, and training procedure. Chapter~\ref{chap:results}
-presents the experimental protocol and reports results.
-Chapter~\ref{chap:conclusion} summarizes the findings, discusses
-limitations, and outlines future work.
+representation learning, joint-embedding architectures, representation
+collapse, and edge/Dew computing. Chapter~\ref{chap:method} details the
+EdgeVerify architecture, loss formulation, and training procedure.
+Chapter~\ref{chap:results} presents the experimental protocol and reports
+results. Chapter~\ref{chap:conclusion} summarizes the findings, discusses
+limitations, and outlines the path toward decentralized, low-powered but
+capable action-conditioned systems.
