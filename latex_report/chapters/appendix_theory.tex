@@ -1,14 +1,16 @@
 \chapter{A Linear-Model Analysis of Placement-Induced Collapse}
 \label{app:theory}
 
-\emph{This appendix is a draft analysis to be verified and adapted. It gives a
-first-principles explanation, in a linearized model, of why applying the
-variance penalty to the context embedding $s_t$ without a co-located
-covariance penalty on $s_t$ induces rank collapse---and why that collapse is
-invisible to both the training loss and the variance criterion. The argument
-reproduces the three empirical signatures reported in
-Section~\ref{sec:placement}: a final variance loss of $0$, the largest
-$\bar\sigma$, and effective rank $\approx 1$.}
+\emph{This appendix gives a first-principles explanation, in a linearized
+model, of why applying the variance penalty to the context embedding $s_t$
+without a co-located covariance penalty on $s_t$ induces rank collapse---and
+why that collapse is invisible to both the training loss and the variance
+criterion. The analysis is deliberately idealized---it treats the encoder and
+predictor as linear and characterizes collapsed fixed points rather than
+proving that gradient descent converges to them (the assumptions and their
+limits are stated in Section~\ref{app:theory-limits})---but it reproduces the
+three empirical signatures reported in Section~\ref{sec:placement}: a final
+variance loss of $0$, the largest $\bar\sigma$, and effective rank $\approx 1$.}
 
 \section{Setup}
 Approximate the context encoder and the predictor by linear maps. Let the
@@ -98,6 +100,7 @@ and the collapsed optimum is invisible to the objective---exactly the
 phenomenon characterized empirically in this thesis.
 
 \section{Limitations of the analysis}
+\label{app:theory-limits}
 The argument treats the encoder and predictor as linear and the input as
 isotropic Gaussian; it characterizes the optimality of collapsed
 \emph{fixed points} rather than proving that gradient descent converges to

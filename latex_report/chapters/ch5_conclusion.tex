@@ -17,7 +17,7 @@ strict memory budgets and representational collapse.
 The work contributes: (i) the EdgeVerify architecture and its
 action-conditioned prediction formulation; (ii) a negative-free, stable
 local loss that regularizes the representation with variance and covariance
-terms; (iii) a proof-of-concept PyTorch implementation together with a
+terms; (iii) a reference PyTorch implementation together with a
 reproducible protocol for evaluating convergence, collapse, latency, and
 memory footprint; (iv) a systematic regularizer-placement study yielding a
 design principle---applying a variance penalty to an embedding without a
@@ -31,7 +31,11 @@ and (vi) a scaling study (ResNet-18 on full CIFAR-10) establishing that the
 placement effect on rank persists but is far milder with a high-capacity
 backbone, and that the effective-rank/usefulness correspondence---and hence the
 practical benefit of the reformulation---is \emph{scale-dependent} and does not
-hold at ResNet/CIFAR scale.
+hold at ResNet/CIFAR scale; and (vii) a measured low-power training result
+(Section~\ref{sec:memory}) showing that a layer-wise local scheme holds peak
+training memory near-constant with encoder depth---a $5.0\times$ reduction over
+end-to-end backpropagation at depth $32$---without collapsing the
+representation.
 
 \section{Limitations}
 The principal limitation of the present work is that empirical validation
@@ -75,11 +79,12 @@ Several directions follow directly from the experiments reported here:
     stronger self-supervised protocol, and evaluation beyond a linear probe are
     needed to determine whether the decoupling reflects undertraining or a
     genuine property of the objective in high-capacity models.
-    \item \textbf{On-device measurement.} All timing and memory figures are
-    CPU-only. Deploying the encoder on a defined edge device would replace them
-    with hardware-accurate latency, memory, and energy measurements, and would
-    let the memory-bounded local training scheme's peak-memory behavior
-    (Chapter~\ref{chap:method}) be measured rather than analyzed.
+    \item \textbf{On-device measurement.} Inference timing is CPU-only, and the
+    memory-bounded training study (Section~\ref{sec:memory}) was measured on a
+    commodity GPU. Deploying the encoder on a defined edge device would replace
+    these with hardware-accurate latency, memory, and energy measurements on the
+    target platform, and would confirm that the near-constant depth scaling
+    observed here holds within a real on-device budget.
     \item \textbf{Heterogeneous and asynchronous federation.} The federated
     study now covers non-IID label skew and up to ten clients; realistic
     deployment additionally requires heterogeneous and asynchronously

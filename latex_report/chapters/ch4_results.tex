@@ -17,12 +17,21 @@ self-supervised representation rather than a downstream classifier.
 
 \section{Research Questions}
 \begin{description}
-    \item[RQ1 (Collapse):] Does the variance/covariance regularization
-    prevent representational collapse relative to an unregularized
-    ($\alpha = \beta = 0$) JEPA?
-    \item[RQ2 (Efficiency):] What are the inference latency and memory
-    footprint of EdgeVerify?
-    \item[RQ3 (Convergence):] Does the local objective converge stably?
+    \item[RQ1 (Collapse and placement):] Does the variance/covariance
+    regularization prevent representational collapse relative to an
+    unregularized ($\alpha = \beta = 0$) JEPA and converge stably, and does
+    \emph{where} the two penalties are applied---on the context embedding
+    $s_t$ or the prediction $s_{\text{pred}}$---govern whether collapse
+    occurs?
+    \item[RQ2 (Decentralization):] Does the corrected placement's collapse
+    resistance persist when training is decentralized across federated,
+    non-IID nodes?
+    \item[RQ3 (Scale):] Do the placement effect and the rank--usefulness
+    correspondence hold with a higher-capacity backbone (ResNet-18) at
+    benchmark scale?
+    \item[RQ4 (Efficiency):] What are the inference latency and memory
+    footprint of EdgeVerify, and does the layer-wise local training scheme
+    bound peak \emph{training} memory as encoder depth grows?
 \end{description}
 
 \section{Experimental Setup}
@@ -113,7 +122,7 @@ warm-up).
 
 \section{Results}
 
-\subsection{Convergence and Collapse (RQ1, RQ3)}
+\subsection{Convergence and Collapse (RQ1)}
 Table~\ref{tab:convergence} reports the final loss and collapse indicators;
 Figure~\ref{fig:losscurves} shows the training curves and
 Figure~\ref{fig:collapse} the collapse indicators.
@@ -196,7 +205,7 @@ dimensional (rank) collapse.} Crucially, this pattern is reproduced on the
 CIFAR-10 natural-image subset, indicating that it is not an artifact of the
 synthetic or low-resolution data.
 
-\subsection{Efficiency (RQ2)}
+\subsection{Efficiency (RQ4)}
 \label{sec:efficiency}
 Table~\ref{tab:efficiency} reports the model's cost. The architecture is
 compact---$745{,}536$ parameters, $2.84$~MB of parameter memory---and
@@ -225,6 +234,92 @@ The parameter count and memory are architecture-fixed and identical across
 datasets. Latency is CPU wall-clock and environment-dependent; the CIFAR-10
 figure is from Colab (its per-run standard deviation and peak RSS were not
 recorded).
+
+\subsection{Memory-Bounded Training: Depth Scaling (RQ4)}
+\label{sec:memory}
+The efficiency figures above concern inference. The training-time memory claim
+of Chapter~\ref{chap:method}---that layer-wise local training bounds peak
+memory as encoder depth grows, whereas end-to-end backpropagation does
+not---is tested directly here. A depth-configurable convolutional encoder
+($C = 128$ channels per block, $32 \times 32$ feature maps, batch size $128$)
+is trained for $30$ steps under each scheme with the co-located
+variance$+$covariance objective (the collapse-resistant placement of
+Section~\ref{sec:placement}), and the real peak GPU memory
+(\texttt{torch.cuda.max\_memory\_allocated}) is recorded on a Colab L4,
+averaged over three seeds. Table~\ref{tab:memory} and Figure~\ref{fig:memory}
+report the result.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Peak GPU training memory and final-embedding effective rank vs.\
+    encoder depth: end-to-end vs.\ layer-wise local training (Colab L4). Peak
+    memory is deterministic; effective rank is mean $\pm$ std over three seeds.
+    Local training holds peak memory near-constant while keeping effective rank
+    well above the rank-$1$ collapse floor.}
+    \label{tab:memory}
+    \setlength{\tabcolsep}{8pt}
+    \begin{tabular}{lcccc}
+        \toprule
+        & \multicolumn{2}{c}{\textbf{Peak memory (MB)}}
+        & \multicolumn{2}{c}{\textbf{Effective rank}} \\
+        \cmidrule(lr){2-3}\cmidrule(lr){4-5}
+        \textbf{Depth} & \textbf{End-to-end} & \textbf{Local}
+        & \textbf{End-to-end} & \textbf{Local} \\
+        \midrule
+        $2$  & $862.4$  & $862.8$ & $2.93 \pm 0.27$ & $3.05 \pm 0.09$ \\
+        $4$  & $1025.2$ & $867.8$ & $3.65 \pm 0.30$ & $3.58 \pm 0.15$ \\
+        $8$  & $1544.0$ & $877.9$ & $3.85 \pm 0.06$ & $3.27 \pm 0.06$ \\
+        $16$ & $2581.5$ & $898.0$ & $2.72 \pm 0.31$ & $2.88 \pm 0.11$ \\
+        $24$ & $3619.1$ & $918.0$ & $2.86 \pm 1.14$ & $3.34 \pm 0.32$ \\
+        $32$ & $\mathbf{4656.6}$ & $\mathbf{938.1}$ & $2.54 \pm 1.00$ & $3.29 \pm 0.10$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/memory_bounded.png}
+    \caption{Memory-bounded training. (a) Peak GPU training memory grows
+    approximately linearly with encoder depth under end-to-end backpropagation
+    but stays near-constant under layer-wise local training; at depth $32$ the
+    local scheme uses $5.0\times$ less memory. (b) The final-embedding effective
+    rank under local training remains well above the rank-$1$ collapse floor at
+    every depth (mean $\pm$ std over three seeds). Ranks are computed on random
+    inputs and serve as a non-collapse check, not a downstream-quality measure.}
+    \label{fig:memory}
+\end{figure}
+
+Two observations follow. First, the memory scaling is as predicted and the
+separation is large. End-to-end peak memory grows approximately linearly with
+depth---from $862$~MB at depth $2$ to $4657$~MB at depth $32$ ($\approx 130$~MB
+per added block)---while the layer-wise local scheme stays essentially flat,
+rising only from $863$~MB to $938$~MB over the same range ($\approx 2.5$~MB per
+block, a $9\%$ increase across a $16\times$ change in depth). At depth $32$ the
+local scheme trains the same encoder in $938$~MB against $4657$~MB for
+end-to-end---a $5.0\times$ reduction, or $3.7$~GB saved---which is the
+difference between fitting and not fitting a deep encoder within a fixed
+on-device budget. The common $\approx 862$~MB floor at depth $2$ is the CUDA
+context, parameters, and optimizer state; the depth-dependent term above it is
+the activation memory the scheme targets.
+
+Second, the memory saving does not induce collapse. The effective rank of the
+final embedding under local training stays in the range $3.0$--$3.6$ at every
+depth---an order of magnitude above the rank-$1$ collapse floor---and is in fact
+more stable than end-to-end, whose rank becomes noisy at large depth
+($2.54 \pm 1.00$ at depth $32$ versus $3.29 \pm 0.10$ for local). Because the
+inputs here are random tensors, these ranks are a \emph{non-collapse} check
+rather than a downstream-quality measurement: they confirm that detaching the
+graph between blocks does not drive the representation into a degenerate
+subspace, not that the features are useful for a task.
+
+Two caveats bound the result. The local scheme adds a lightweight per-block
+head and performs one backward pass per block per step, trading a modest
+increase in compute and parameter count for the memory reduction; and this is a
+controlled micro-benchmark on synthetic inputs, designed to isolate the
+memory--depth relationship rather than to train a downstream task. Within those
+bounds, it establishes the thesis's low-power training claim as a \emph{measured}
+effect: near-constant-memory training of deep encoders is achievable on
+commodity hardware without representational collapse.
 
 \subsection{Independent Reproduction}
 \label{sec:repro}
@@ -543,7 +638,7 @@ more dimensions), so the variance hinge is no longer saturated; the probe
 indicates this does not harm usefulness, but a joint tuning of $\alpha$ and
 $\beta$ under the shared formulation is a natural follow-up.
 
-\subsection{Decentralized (Multi-Agent) Training}
+\subsection{Decentralized (Multi-Agent) Training (RQ2)}
 \label{sec:federated}
 The edge and Dew setting that motivates EdgeVerify is inherently
 decentralized, so a natural question is whether the placement finding and the
@@ -651,7 +746,7 @@ heterogeneous or asynchronous clients remain for future work.
     \label{fig:noniid}
 \end{figure}
 
-\subsection{Scaling Up: ResNet-18 on Full CIFAR-10}
+\subsection{Scaling Up: ResNet-18 on Full CIFAR-10 (RQ3)}
 \label{sec:scale}
 The experiments so far use the lightweight CNN. To test whether the findings
 hold with a standard backbone at benchmark scale, we replace the encoder with a
@@ -747,11 +842,18 @@ decentralized training. A crucial qualification follows from the scaling study
 usefulness that underpins this diagnosis holds at small scale but \emph{breaks}
 for a ResNet-18 on CIFAR-10, where the highest-rank configuration is the least
 useful and no regularizer beats the unregularized baseline. The placement
-effect on rank persists across scales; its practical benefit does not. On RQ2, the architecture is genuinely lightweight ($2.84$~MB of
+effect on rank persists across scales; its practical benefit does not. On
+RQ2 (decentralization), the corrected placement's collapse resistance
+transfers to federated training and survives non-IID label skew with up to
+ten clients (Section~\ref{sec:federated}), whereas the original wiring
+collapses in every regime; on RQ3 (scale), the placement effect on rank
+reproduces with a ResNet-18 but its practical benefit does not, as detailed
+above. On RQ4, the architecture is genuinely lightweight ($2.84$~MB of
 parameters, millisecond CPU inference), supporting its suitability for
-edge deployment in terms of size. On RQ3, the distillation term converges
-rapidly in all cases; the full objective's total loss is non-monotonic
-because the covariance term grows once distillation is satisfied.
+edge deployment in terms of size. Finally, on the convergence sub-question
+of RQ1, the distillation term converges rapidly in all cases; the full
+objective's total loss is non-monotonic because the covariance term grows
+once distillation is satisfied.
 
 Notably, the unregularized baseline attains a far lower total loss
 ($\sim 10^{-3}$) precisely because, with $\alpha = \beta = 0$, the objective

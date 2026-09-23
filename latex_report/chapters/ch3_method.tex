@@ -3,7 +3,7 @@
 
 This chapter describes the EdgeVerify architecture, its training objective,
 and the localized training procedure. The formulation follows the
-proof-of-concept implementation exactly; parameter names and coefficients
+reference implementation exactly; parameter names and coefficients
 are preserved as defined in the reference code.
 
 \section{Architecture Design}
@@ -59,7 +59,14 @@ representation:
 Conditioning the predictor on an action aligns EdgeVerify with the
 world-model formulation of \cite{lecun2022path}, in which future or masked
 representations are predicted as a function of a transformation applied to
-the context.
+the context. In the present study the spatial action is determined by the
+masking procedure and is not itself varied, ablated, or otherwise isolated;
+action conditioning is included as the structural basis for the world-model
+reading of the architecture (Chapter~\ref{chap:intro}), and quantifying its
+individual contribution---for example by degrading or randomizing the action
+and measuring the effect on prediction---is left to future work. The
+experiments in Chapter~\ref{chap:results} therefore concern the
+representation and its collapse behavior, not the action channel.
 
 \section{Loss Function and Regularization}
 To ensure representational stability without negative-sample pairing, the
@@ -108,17 +115,50 @@ covariance penalty to the prediction $s_{\text{pred}}$ regularizes both the
 encoder output and the predictor output, discouraging both constant and
 correlated (rank-deficient) solutions.
 
-\section{Localized, Layer-Wise Gradient Isolation}
-To respect the memory budget of an edge node, EdgeVerify bounds the
-backpropagation graph rather than differentiating end-to-end through a
-large backbone. The stop-gradient on the target branch
-(Eq.~\ref{eq:ema}) and the detachment of the teacher target act as a
-\emph{firebreak}: gradients from $\mathcal{L}_{\text{distill}}$ do not
-propagate into $f_{\bar\theta}$, so only the online parameters
-$\{\theta, \phi, \psi\}$ retain an active computational graph at any step.
-This isolation is what makes multi-module training feasible under strict
-VRAM limits, and it is the property whose memory footprint
-Chapter~\ref{chap:results} is designed to quantify.
+\section{Gradient Isolation and the Memory Budget}
+EdgeVerify uses two distinct forms of gradient isolation, and it is
+important to separate them, because they address different memory costs and
+have different empirical status in this thesis.
+
+\paragraph{Target-branch isolation (used throughout).}
+The stop-gradient on the EMA target branch (Eq.~\ref{eq:ema}) and the
+detachment of the teacher target ensure that gradients from
+$\mathcal{L}_{\text{distill}}$ never propagate into $f_{\bar\theta}$, so
+only the online parameters $\{\theta, \phi, \psi\}$ carry an active
+computational graph. This is the standard BYOL/SimSiam asymmetry
+\cite{grill2020bootstrap, chen2021exploring}; it is present in every
+experiment reported in Chapter~\ref{chap:results} and spares the memory and
+compute of backpropagating through a second encoder. It does \emph{not},
+however, bound the graph \emph{within} the online encoder, which is still
+differentiated end-to-end through its blocks.
+
+\paragraph{Layer-wise local training (for deeper encoders).}
+The online encoder used in the main experiments is deliberately shallow
+(three convolutional blocks), so end-to-end backpropagation through it is
+inexpensive and the target-branch isolation above suffices. The memory
+obstacle that motivates on-device training arises only for \emph{deeper}
+encoders, where the retained activation graph grows with depth. For that
+regime we define a layer-wise \emph{local} training scheme: each block is
+optimized against its own local variance/covariance objective, and the
+block output is detached before the next block, so that only one block's
+activation graph is live at a time and peak training-activation memory
+becomes approximately independent of depth. This scheme is \emph{not}
+exercised by the shallow encoder in the collapse experiments; it is the
+mechanism by which the same design would train deeper encoders under a
+fixed on-device memory budget, and its peak-memory behavior as a function
+of depth---together with a check that local training still yields
+non-collapsed representations---is evaluated separately as the low-power
+training study (Section~\ref{sec:memory}) rather than assumed.
+
+\paragraph{Scope of the memory claim.}
+Accordingly, the collapse, placement, and federated results of
+Chapter~\ref{chap:results} were produced with end-to-end training of the
+shallow online encoder. The layer-wise local scheme is presented as the
+architecture's route to memory-bounded training of deeper encoders, and is
+evaluated on that specific question in Section~\ref{sec:memory}---where it is
+shown to hold peak training memory near-constant with depth (a $5.0\times$
+reduction at depth $32$) without collapsing the representation---rather than
+credited to the main experiments.
 
 \section{Training Procedure}
 The model is optimized with AdamW (learning rate $10^{-3}$, weight decay
@@ -127,11 +167,11 @@ $(s_{\text{pred}}, s_t)$, the target branch produces $s_{\text{target}}$
 under stop-gradient, the total loss (Eq.~\ref{eq:total}) is backpropagated
 through the online parameters, and the target encoder is updated by the
 EMA rule (Eq.~\ref{eq:ema}). Table~\ref{tab:hparams} summarizes the
-configuration used by the proof-of-concept implementation.
+configuration used by the reference implementation.
 
 \begin{table}[htbp]
     \centering
-    \caption{EdgeVerify configuration in the proof-of-concept implementation.}
+    \caption{EdgeVerify configuration in the reference implementation.}
     \label{tab:hparams}
     \begin{tabular}{ll}
         \toprule
@@ -152,14 +192,12 @@ configuration used by the proof-of-concept implementation.
     \end{tabular}
 \end{table}
 
-\paragraph{Note on the current data pipeline.}
-In the present proof-of-concept, the training loop operates on
-synthetically generated tensors: full images are sampled from a uniform
-distribution, the partial (context) view is produced by zeroing a central
-$32 \times 32$ region, and a single fixed bounding box is used as the
-spatial action. This configuration verifies that the architecture trains
-and that the loss is numerically stable, but it does not constitute an
-evaluation on real data. Replacing this pipeline with a standard image
-dataset is a prerequisite for the empirical results discussed in
-Chapter~\ref{chap:results}, and is reflected in the experimental design
-below.
+\paragraph{Note on the data pipeline.}
+The masking procedure defines the training pair: for each image the context
+view is the image with a random region zeroed, and the spatial action $a$ is
+the normalized bounding box of that region.
+Chapter~\ref{chap:results} instantiates this pipeline on three concrete
+datasets---a procedurally generated \emph{structured} set, the scikit-learn
+\emph{digits} set, and CIFAR-10---replacing the uniform-noise tensors that were
+used only for an initial numerical smoke test. All empirical results reported
+in this thesis are obtained on these datasets, not on synthetic noise.

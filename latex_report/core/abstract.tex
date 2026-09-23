@@ -37,7 +37,10 @@ regularizer beats an unregularized baseline. The rank--usefulness
 correspondence, and the practical benefit of the reformulation, are therefore
 \emph{scale-dependent}.
 
-The architecture is compact ($\sim\!0.75$M parameters, $2.84$~MB). The thesis
+The architecture is compact ($\sim\!0.75$M parameters, $2.84$~MB), and a
+layer-wise local training scheme is shown to hold peak training memory
+near-constant as encoder depth grows---a $5.0\times$ reduction over end-to-end
+backpropagation at depth $32$---without inducing collapse. The thesis
 identifies regularizer \emph{placement}---not merely presence---as the factor
 governing collapse in decentralized JEPAs, and frames silent capability loss
 as the central obstacle on the path toward decentralized, low-powered but

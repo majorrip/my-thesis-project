@@ -105,6 +105,10 @@ The contributions of this thesis are:
     \item Evidence that this behavior transfers to a decentralized
     (federated, non-IID) setting, and an honest characterization of its
     scale-dependence (Chapter~\ref{chap:results}).
+    \item A measured low-power training result: a layer-wise local scheme
+    holds peak training memory near-constant as encoder depth grows---a
+    $5.0\times$ reduction over end-to-end backpropagation at depth $32$---%
+    without inducing collapse (Section~\ref{sec:memory}).
     \item A reproducible PyTorch implementation and evaluation methodology
     for assessing the framework on resource-constrained hardware.
 \end{itemize}
@@ -133,12 +137,13 @@ explicitly to avoid overclaiming:
     \item \textbf{Low-powered execution.} The lightweight design is
     motivated by edge constraints. Inference-time efficiency---parameter
     count, parameter memory, and single-sample latency---is measured on
-    commodity CPU (Section~\ref{sec:efficiency}), and a memory-bounded,
-    layer-wise (local) training scheme is developed to bound the active
-    computational graph. However, the training-time memory savings of the
-    local scheme are not measured on deployed edge hardware, all timing is
-    CPU wall-clock and environment-dependent, and no claim of capability
-    parity with a large centralized model is made.
+    commodity CPU (Section~\ref{sec:efficiency}), and the layer-wise (local)
+    training scheme is shown to hold peak training memory near-constant as
+    encoder depth grows (Section~\ref{sec:memory})---a $5.0\times$ reduction
+    over end-to-end backpropagation at depth $32$. These measurements are
+    taken on commodity CPU/GPU rather than on deployed edge hardware, all
+    timing is CPU wall-clock and environment-dependent, and no claim of
+    capability parity with a large centralized model is made.
 \end{enumerate}
 What the thesis contributes and evaluates is the action-conditioned,
 variance--covariance-regularized joint-embedding core, the identification
