@@ -1,53 +1,44 @@
 \chapter*{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
 
-As artificial intelligence moves toward decentralized deployment across
-local edge and Dew computing nodes, preserving representational quality
-without relying on cloud-based computation remains a critical challenge.
-Centralized architectures impose communication latency and data-privacy
-risks, whereas conventional lightweight models are prone to
-representation degradation---and, in the non-generative case, to latent
-collapse---when trained on resource-constrained micro-architectures.
+The trajectory of artificial intelligence toward \emph{decentralized,
+low-powered but capable} deployment---collaborating commodity devices that
+learn and act without a central coordinator, yet retain the representational
+quality of a large centralized model---demands models that stay capable under
+tight resource and communication budgets. Joint-Embedding Predictive
+Architectures (JEPAs) suit this regime: they predict in an abstract latent
+space rather than reconstructing raw inputs and, being action-conditioned,
+form a minimal world-model core for an autonomous agent. Their weakness is
+that non-generative predictors are prone to representation collapse, which
+silently destroys the very capability such systems depend on.
 
-This thesis introduces \textbf{EdgeVerify}, a Joint-Embedding Predictive
-Architecture (JEPA) designed for localized execution across the Dew and
-Edge computing tiers. Rather than reconstructing high-dimensional token
-sequences or raw pixels, EdgeVerify predicts context representations
-directly within an abstract joint-embedding space, using an
-Exponential-Moving-Average (EMA) target encoder and an action-conditioned
-latent predictor. To prevent dimensional collapse during localized,
-layer-wise gradient updates, we integrate VICReg-inspired variance and
-covariance regularization directly into the distillation objective,
-removing the need for negative-sample pairing.
+This thesis presents \textbf{EdgeVerify}, an action-conditioned JEPA pairing
+an Exponential-Moving-Average (EMA) target encoder with a negative-free,
+VICReg-inspired variance/covariance objective, applied within a
+memory-bounded, layer-wise (local) training scheme. Its central question is
+not \emph{whether} such an objective prevents collapse, but \emph{where}
+within the architecture it must act.
 
-We present a proof-of-concept implementation of the architecture and loss
-formulation, together with a reproducible experimental protocol for
-measuring convergence stability, representation collapse (embedding
-standard deviation and effective rank), and inference cost. A
-proof-of-concept evaluation against a non-regularized baseline---conducted
-on structured, digits, and CIFAR-10 data, and reproduced across two
-independent environments---shows that the variance constraint reliably
-prevents variance collapse (sustaining a mean embedding standard deviation
-above the hinge threshold), while revealing that at the current covariance
-weight the objective does not prevent dimensional (rank) collapse; this
-pattern holds on the CIFAR-10 natural-image subset as well as the smaller
-datasets. A systematic placement study isolates the cause: applying the
-variance penalty to an embedding \emph{without} a co-located covariance
-penalty on the same embedding induces rank collapse that is worse than no
-regularization and invisible to both the training loss and the variance
-criterion. The implied correction---co-locating both penalties on the context
-embedding---restores effective rank by more than an order of magnitude on all
-three datasets and recovers linear-probe accuracy to the unregularized level
-(digits $0.56\!\rightarrow\!0.94$; CIFAR-10 $0.31\!\rightarrow\!0.41$).
-In a federated (FedAvg) setting the correction's collapse resistance
-transfers, and it holds under non-IID label skew with up to ten clients,
-whereas the flawed placement collapses in every regime. Critically, however, a
-larger-scale study (ResNet-18 on full CIFAR-10) shows the extreme collapse to
-be largely a small-model artifact and---more consequentially---that effective
-rank ceases to predict downstream accuracy at scale: the highest-rank
-configuration is the \emph{least} useful, and no regularizer beats an
-unregularized baseline. The rank--usefulness correspondence, and the practical
-benefit of the reformulation, are therefore \emph{scale-dependent}. The
-architecture itself is compact ($\sim\!0.75$M parameters, $2.84$~MB);
-characterizing the scale behavior with longer, multi-seed training, along with
-on-device measurement, is the primary item of future work.
+Across structured, digits, and CIFAR-10 data, and reproduced in two
+independent environments, a systematic placement study isolates the mechanism:
+a variance penalty applied to an embedding \emph{without} a co-located
+covariance penalty on the same embedding induces rank collapse that is worse
+than no regularization and invisible to both the training loss and the
+variance criterion. Co-locating both penalties restores effective rank by over
+an order of magnitude and recovers linear-probe accuracy to the unregularized
+level (digits $0.56\!\rightarrow\!0.94$; CIFAR-10 $0.31\!\rightarrow\!0.41$),
+and this collapse resistance transfers to federated (FedAvg) training under
+non-IID label skew with up to ten clients, whereas the flawed placement
+collapses in every regime. A larger-scale study (ResNet-18 on full CIFAR-10)
+qualifies the result honestly: the extreme collapse is largely a small-model
+artifact, and effective rank ceases to predict downstream accuracy at
+scale---the highest-rank configuration is the \emph{least} useful, and no
+regularizer beats an unregularized baseline. The rank--usefulness
+correspondence, and the practical benefit of the reformulation, are therefore
+\emph{scale-dependent}.
+
+The architecture is compact ($\sim\!0.75$M parameters, $2.84$~MB). The thesis
+identifies regularizer \emph{placement}---not merely presence---as the factor
+governing collapse in decentralized JEPAs, and frames silent capability loss
+as the central obstacle on the path toward decentralized, low-powered but
+capable action-conditioned systems.
